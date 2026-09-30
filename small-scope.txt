@@ -1,0 +1,45 @@
+
+This highlights the vjr for a smaller scope, in case I get to do it for my third year at uni.
+
+Hardware:
+    (MUST)
+    Screen
+    Speakers
+    Buttons
+        D-Pad, face buttons, home button, idk if enough space for start and select
+    Shoulder buttons (Hall effect sensors)
+    Circle pads (from 3DS)
+    SD card reader
+    
+    (MAYBE)
+    USBC charging, as opposed to battery managed (or dev board plugged in if not doing PCB and game case).
+    
+
+    (NOT YET)
+    PCB and game case made. Try and submit as a proof of concept first to test the waters.
+
+
+Software:
+
+    All of these are to be written in Rust.
+
+    BIOS (flashed on ESP32):
+        Must interface with all hardware in some way.
+            Image - custom VIMG format
+            Audio - ADPCM and WAV support (unsure if will be able to add MIDI sound effect support)
+
+        Provide abstraction layer for software to use.
+            Graphics - 2D is a must. 3D may be a challenge, but theoretically feasable.
+
+
+
+        Must have a main menu mode and a background daemon mode.
+        Must be able to read file data from SD card, display games along with icons, and load them in succesfully. 
+        Must be able to fetch file data from server, pick a file, and download it.
+
+    TCP Server:
+        Must be well-written, memory safe code.
+        Must provide appropriate checks to ensure it is definitely communicating with the vjr.
+        Must transfer data over succesfully.
+
+
