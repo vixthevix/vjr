@@ -1,0 +1,59 @@
+Documenting on 10/7/26
+
+This is to be written into the red notebook once the arduino project documentation is finised, but im bored and want to start writing my ideas for this thing.
+
+this is to be a handheld console, that reads games off an sd card, and can connect to a TCP server to download games.
+
+The microcontroller to be used is the esp32 WROOM model. considering WROVER but its more expensive, and who knows if I'll need it.
+
+Features to be had:
+    HARDWARE:
+        Face buttons similar to that of 3DS:
+            D pad, 4 face buttons, start and select, home button.
+            considering dual circle pads, would need to look into how this would work. if possible, layout in style of xbox controller.
+
+        dual analogue shoulder buttons, big and beefy like gba
+        micro sd card slot
+        speakers and headphone jack
+        320 x 240 spi screen
+        internal cooling (of course)
+        rechargable 3.7v flat battery
+        usbc slot with multiple uses:
+            by default, charges the device.
+            if connected to the pc, recognized as a usb storage device if sd card is inside the console.
+            additionally, by use of a program i will make, it will allow video streaming into the program.
+            not planning to output to any other format for now (e.g. hdmi, mini hdmi, composite etc., at least on the console itself; maybe via a usbc custom adapter, it would be possible.)
+    
+    SOFTWARE:
+        All to be written in rust.
+        BIOS and home menu comes default on the device.
+            handles screen buffering and display, audio, IO, sd card reading and writing, and a lot of things.
+        
+        programs to run on the device are to be written using a library I will make to make it easier to work with the device.
+        furthermore, I will be using the same syntax of this library to make a different one for "emulating" these games on your pc, for easy testing before committing.
+            things you cannot test on pc:
+                radio communication
+                device-to-pc video streaming
+            will come with debug features such as memory usage to help with debugging and optimizing.
+        this will make it very easy to port games from pc testing to on-device.
+
+        games will utilise all the hardware on the device, including radio communication via LoRa for local play, and internet play via the WiFi chip (will require a custom server that i will not provide).
+
+        I only plan to provide one TCP server: the VJR User Repository, where people can post their programs that can be downloaded onto the device, from the device.
+        There will also be a web interface for this so that people can download the ROMs off my website :p (w cottage)
+        thats it, scope creep.
+
+        the format of a program consists of a folder, containing:
+            a config.txt file for things like the program name, program icon, and other things
+            the program binary
+            the assets the program uses.
+        config.txt and the binary are mandatory for a game to be recognized by the BIOS.
+
+        furthermore, the home button will interrupt a game and bring up a menu, either a custom one or the home menu. you can resume your game, exit the game to pick a new one, and in general just have the home screen.
+        this is probably the simplest idea, to just load up the home screen with the option of continuing or resetting the game.
+
+        I plan to make some default programs for the system: some testing programs for the IO, and a tetris clone.
+
+
+
+

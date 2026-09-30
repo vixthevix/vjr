@@ -1,0 +1,14 @@
+#!/bin/bash
+
+echo compiling $1...
+gcc $1.c -o $1 -lraylib -lGL -lm -lpthread -ldl -lrt -lX11
+echo finished compiling
+
+read -p "Run? (y/n) " response
+
+if [ $response == "y" ]; then
+    
+    echo running...
+    ./$1
+
+fi
