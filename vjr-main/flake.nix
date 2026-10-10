@@ -75,7 +75,7 @@
             
             
             else
-                fun_display "$env_script not found, run 'espup install' to proceed normally." 
+                fun_display "$env_script not found, run 'espup install' and '. \$HOME/export-esp.sh' to proceed normally." 
             fi
           '';
         };
