@@ -45,7 +45,7 @@
             gcc     # Provides C compiler
             gnumake # Provides build system
             raylib  # Provides PC graphical library
-          ];
+          ] ++ guiLibs;
 
           shellHook = ''
             
