@@ -15,7 +15,11 @@ Features to be had:
         dual analogue shoulder buttons, big and beefy like gba
         micro sd card slot
         speakers and headphone jack
+        
         320 x 240 spi screen
+            3.2 Inch TFT LCD Screen Display SPI Module 14P Touch Panel 320*240 RGB SPI 4 Wire Wide Viewing Angle ILI9341 18 Pin 0.8mm
+            this is kind of just an industry standard, very easy to get one of these. it uses the same tech and interface as our small 128x128 arduino screen does, including rgb565.
+
         internal cooling (of course)
         rechargable 3.7v flat battery
         usbc slot with multiple uses:
@@ -53,7 +57,3 @@ Features to be had:
         this is probably the simplest idea, to just load up the home screen with the option of continuing or resetting the game.
 
         I plan to make some default programs for the system: some testing programs for the IO, and a tetris clone.
-
-
-
-
