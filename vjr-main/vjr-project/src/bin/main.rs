@@ -14,18 +14,40 @@ use esp_hal::clock::CpuClock;
 use esp_hal::timer::timg::TimerGroup;
 use log::info;
 
+use embassy_sync::{
+    pipe::Pipe,
+    blocking_mutex::raw::NoopRawMutex
+};
+
 extern crate alloc;
 
 // This creates a default app-descriptor required by the esp-idf bootloader.
 // For more information see: <https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/system/app_image_format.html#application-description>
 esp_bootloader_esp_idf::esp_app_desc!();
 
+#[embassy_executor::task]
+async fn print_task() {
+    loop {
+        info!("Hello world!");
+        Timer::after(Duration::from_secs(1)).await;
+    }
+}
+
+#[embassy_executor::task] 
+async fn led_task(mut led: esp_hal::gpio::Output<'static>) -> ! {
+    loop {
+        led.toggle();
+        Timer::after(Duration::from_millis(500)).await;
+    }
+}
+
+
 #[allow(
     clippy::large_stack_frames,
     reason = "it's not unusual to allocate larger buffers etc. in main"
 )]
 #[esp_rtos::main]
-async fn main(spawner: Spawner) -> ! {
+async fn main(spawner: Spawner) {
     // generator version: 1.4.0
     // generator parameters: -o esp32 -o unstable-hal -o embassy -o alloc -o wifi -o log -o neovim-classic -o vscode -o esp-backtrace -o esp
 
@@ -33,6 +55,13 @@ async fn main(spawner: Spawner) -> ! {
 
     let config = esp_hal::Config::default().with_cpu_clock(CpuClock::max());
     let peripherals = esp_hal::init(config);
+    
+    // peripherals gives us access to the GPIO pins
+    let led = esp_hal::gpio::Output::new(
+        peripherals.GPIO23,       // D23 on dev board
+        esp_hal::gpio::Level::Low, // Voltage
+        esp_hal::gpio::OutputConfig::default()
+    );
 
     esp_alloc::heap_allocator!(#[esp_hal::ram(reclaimed)] size: 98768);
 
@@ -49,10 +78,11 @@ async fn main(spawner: Spawner) -> ! {
     // TODO: Spawn some tasks
     let _ = spawner;
 
-    loop {
-        info!("Hello world!");
-        Timer::after(Duration::from_secs(1)).await;
-    }
+    // With Embassy, run two async tasks.
+    // Printing to serial, and blinking the LED. (DONE)
 
+
+    spawner.spawn(print_task().unwrap());
+    spawner.spawn(led_task(led)  .unwrap());
     // for inspiration have a look at the examples at https://github.com/esp-rs/esp-hal/tree/esp-hal-v1.2.2/examples
 }
