@@ -116,26 +116,30 @@ int main(int argc, char** argv) {
 
     //draw the image
     //we will read chunks of image->width bytes and display them.
-    BeginDrawing();
-    
-    for (unsigned long y = 0; y < image->height; y++) {
-        uint8_t buffer[image->width * 2];
-        fread(buffer, image->width * 2, sizeof(uint8_t), image->file);
-        for (unsigned long x = 0, i = 0; x < image->width; x++) {
-            //every 2 bytes in buffer is a pixel. we must convert to rgb888, and then display it.
-            uint8_t high = buffer[i++], low = buffer[i++];
-            uint16_t colour = ((uint16_t)(high) << 8) | low;
-            Color displayColour = convert(colour);
-            DrawPixel(x, y, displayColour);
-        }
-    }  
-
-    EndDrawing();
-
     printf("Image displayed. Thank you.\n");
 
     //loop to keep window open
-    while (!WindowShouldClose());
+    bool drawn = false;
+    while (!WindowShouldClose()) {
+	    BeginDrawing();
+	    if (!drawn) {
+		drawn = true;
+		    ClearBackground(WHITE);
+		    for (unsigned long y = 0; y < image->height; y++) {
+			uint8_t buffer[image->width * 2];
+			fread(buffer, image->width * 2, sizeof(uint8_t), image->file);
+			for (unsigned long x = 0, i = 0; x < image->width; x++) {
+			    //every 2 bytes in buffer is a pixel. we must convert to rgb888, and then display it.
+			    uint8_t high = buffer[i++], low = buffer[i++];
+			    uint16_t colour = ((uint16_t)(high) << 8) | low;
+			    Color displayColour = convert(colour);
+			    DrawPixel(x, y, displayColour);
+			}
+		    }  
+
+	    }
+	    EndDrawing();
+    }
     CloseWindow();
     
     //free everything
