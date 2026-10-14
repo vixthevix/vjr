@@ -3,7 +3,7 @@ This program will be used to view images of my format, right now called V Images
 Uses raylib and rgb565->rgb888 conversion to display the image.
 */
 
-#include "raylib/src/raylib.h"
+#include <raylib.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
