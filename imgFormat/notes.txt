@@ -32,4 +32,70 @@ Additionally, a viewing program is provided for viewing a VIMG in a raylib windo
 
 The vjr will also be provided with these decompression functions in Rust, but will not provide the compression functions; this is to save memory and also because I don't think it would make sense to create images on the vjr, besides for maybe screenshots which aren't in scope.
 
+COMPRESSION:
+
+An uncompressed image has pixels being 2 bytes long.
+
+Different ways of compressing images:
+	
+	INDEXED COLOUR PALETTE (ICP):
+	An array of colours is stored in the header.
+	The raw image data is composed of indexes into this array.
+	
+	To compromise for fast decompression on the esp32, the max
+	amount of colours available using this method is 256, 		which equates to each index being 1 byte long.
+	
+	On top of this, if your image uses max 16 colours, each 		index will be 4 bits (2 indexes per byte).
+	And if you use max 4 colours, each index will be 2 bits
+	(4 indexes per byte).
+
+
+	RUN LENGTH ENCODING (RLE):
+	Raw image data is stored as: 
+	following colour count (1 byte), pixel data.
+	
+	Pretty standard.
+	
+	Can be combined with ICP, though only makes sense for 1 	byte indexes.
+
+	Could optimise to see the maximum colour streak, 
+	but scope creep.
+
+	Could add degree of "colours look close enough", though 	should be optional due to making image ugly, but more 	compressed for sure.
+
+	HUFFMAN ENCODING (HFME):
+	Its like RLE, where you store the colours used in the 			header, but they are sorted in a binary tree represented 	as an array. Optimised such that common colours are 	navigated to in the least amount of hops.
+
+	When reading bits of the image, you follow along the tree 		(e.g. 1 for left and 0 for right) until a leaf is reached. 	that is the colour used for this pixel.
+	
+	Provides potentially greater colour range than ICP 	(remember, max of 256 colours), though at the cost of a 	more likely inconsistent compression.
+
+	Could be used with RLE, see 		https://www.researchgate.net/figure/Color-values-		distribution_fig3_362941807
+
+	LZ4:
+
+	Assigns references to strings of pixels that repeat. When 	a repeated string is confirmed, instead put a stride and 	pointer value here to memory copy that reference here.
+
+	Not sure how it works, but its pretty cool.
+
+	Can probably be used alongside the other compression 	algorithms as well, unsure.
+
+	SPATIAL COMPRESSION (SC):
+	
+	Like ICP, but stores chunks of pre-defined dimension 	pixels (e.g. 8x8 px chunks) in header array rather than 	individual colours.
+
+	Can probably perform ICP, RLE, HFMC and LZ4 on each chunk 		pixel individually, and then RLE, HFMC and LZ4 on the raw 		image data.
+
+	Good for repeating images such as backgrounds.
+
+	DELTA ENCODING:
+
+	Only for animations, and will probably be labelled under a 	different format (V Animation, or .vanim for instance).
+
+	Frame 1 stored normally,
+	then rest of frames store only pixels that change from 	previous frame. Rest of pixels indicate a "skip" command 		to the esp32. 
+	Previous frame is then compressed and 	written, and 	swapped out with current frame. Continues until last 		frame is analysed.
+
+Scope creep could be an issue, so try and do the bare minimum for now. I'd say ICP, RLE and SC are good for images, and (if we have enough time) attempt delta encoding.
+	
 
