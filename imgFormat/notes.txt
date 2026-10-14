@@ -1,0 +1,35 @@
+The vjr uses the RGB565 pixel format for its screen.
+
+A pixel is represented as two bytes:
+
+	RRRR RGGG GGGB BBBB
+
+Because of this, standard image formats such as PNG, JPEG and BMP will not work.
+Variations of these adapated to RGB565 could work, but I would like to opt for my own image format, just because :3
+
+The format name is V Image, shortened to .vimg
+
+HEADER:
+	
+	String "VIMG"           (size 4, identification and guard)
+	Compression type        (size 1, unique compression type (or could work as flags for compression methods))
+	Full image pixel width  (size 2)
+	Full image pixel height (size 2)
+	...                     (Custom data, variable size, most likely specific to the compression type)
+	String "VIMG"           (size 4, closing guard)
+
+The VIMG header is of variable length; for instance, an uncompressed VIMG header is 13 bytes long.
+
+The formatting program allows you to input any image of any type accepted by stb_image, the C library for dealing with raw image data. 
+It will use stb_image to create a colour stream, and then create an uncompressed VIMG buffer from this stream bby converting the RGB(A) into RGB565.
+Based on the compression type (or flags) given, it will then compress the buffer and store into a file.
+
+Additionally, if no compression explicitly specified, it will go through all types and decide the best one (could be memory and time expensive however, so potentially use multithreading for this).
+
+That should be enough to cover most bases.
+
+Additionally, a viewing program is provided for viewing a VIMG in a raylib window. It will use decompression and reformatting to display on the window.
+
+The vjr will also be provided with these decompression functions in Rust, but will not provide the compression functions; this is to save memory and also because I don't think it would make sense to create images on the vjr, besides for maybe screenshots which aren't in scope.
+
+
