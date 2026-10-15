@@ -1,0 +1,96 @@
+Notes on how to display video properly on vjr.
+
+######################
+# MEMORY CONSTRAINTS #
+######################
+
+The ESP32 WROOM model has 520 kB of memory. 
+
+Our display is a 320x240 px screen.
+RGB565 format => 2 bytes per px.
+
+Total video buffer size = 153600 bytes = ~154 kB.
+
+This is doable, but it results in ~30% of RAM used.
+Additionally, if we wish to use double buffering, this jumps to ~60% of RAM. For video! This is pretty bad.
+
+Instead of full screen buffers, make two row buffers.
+
+row buffer size = width * row height * bpp
+
+For ease of use, make row height a divisor of total display height e.g. 16 px
+
+row buffer size e.g. = 320 * 16 * 2 = 10240 bytes = ~10 kB = ~2% of RAM => ~4% of RAM for two buffers.
+
+This is much better!
+
+
+######################
+# HOW TO SEND BUFFER #
+######################
+
+
+The communication method used will be SPI, 4 pins => MOSI, MISO, CLK, CS.
+Fast and requires low amount of pins.
+
+However, for even greater transfer speeds, we can use DMA SPI, where we point special hardware to a video buffer, say how many bytes to read, and then send it.
+Concurrency + faster speeds (specialised hardware).
+This is what we will be aiming for.
+
+First, do normal SPI and record display speeds. Then, learn how to do DMA SPI and compare transfer speeds to confirm that it is faster.
+
+
+#######################
+# SCENE-BASED DISPLAY #
+#######################
+
+My favourite way of doing graphics stuff in general is to have a Scene object, that stores a list of Display objects.
+
+Scene::display() loops through each Display object and calls Display::display()
+
+Display objects include basic shapes like points, lines, squares, circles, 3d shapes like cubes, images and animations (VIMGs and VANIMs), and fonts.
+
+For 2d objects, each one has a BoundingBox with an origin (x, y) (top left of box), and height and width.
+This BoundingBox is checked against the current Row Video Buffer to see if it needs to be displayed.
+This should even be able to work for objects slightly offscreen (top-left will need to be pre-processed).
+
+For speed, use iterators here, for iterating through Display objects and individual Display pixel data.
+
+
+###############
+# 3D GRAPHICS #
+###############
+
+Watch tsoding video: https://www.youtube.com/watch?v=qjWkNZ0SXfo
+
+3D coordinate (x, y, z) => 2D coordinate (x/z, y/z)
+
+Write up why this is the case.
+
+There may be some issues with this, such as culling, Z fighting etc. WE WILL COME TO THESE WHEN WE COME TO THESE
+
+Additionally, implement matrix based display (for 2D as well), meaning projection + view (camera) + object matrices (remember your OpenGL training).
+The ESP32 should be able to easily work with matrices due to fast floating point units.
+
+A camera would be great as would allow for large backgrounds to be displayed.
+
+
+###########
+# DRIVERS #
+###########
+
+The screen we will be using requires the ILI9341 LCD Controller Driver.
+
+Probably be using https://crates.io/crates/mipidsi for driver source.
+
+MIPI is a standard used by displays for communicating with them correctly.
+It describes commands that can be sent to the display to do things.
+
+The ILI9341 driver is an example that uses the MIPI standard. The ST7735 driver (used by the 128x128 px display I also have) is MIPI compliant as well, so the same commands are used for both.
+
+Other crates to consider:
+
+https://crates.io/crates/embedded-graphics
+https://crates.io/crates/display-interface-spi
+
+
