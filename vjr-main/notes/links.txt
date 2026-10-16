@@ -1,0 +1,17 @@
+
+List of links that I find important for reference/learning.
+
+// Includes tons of info on interacting with hardware peripherals.
+https://esp32.implrust.com/index.html
+
+// General information, has information on setting up a project
+https://docs.espressif.com/projects/rust/book/
+
+// General information, has lots of links for things,
+// and integrating with C code (probably uneeded, but its good to know)
+https://docs.rust-embedded.org/book/intro/index.html
+
+// General information, has things on DMA
+https://docs.espressif.com/projects/rust/no_std-training/01_intro.html
+
+
