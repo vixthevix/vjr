@@ -14,4 +14,8 @@ https://docs.rust-embedded.org/book/intro/index.html
 // General information, has things on DMA
 https://docs.espressif.com/projects/rust/no_std-training/01_intro.html
 
+// ESPNOW in rust
+https://docs.espressif.com/projects/rust/esp-radio/0.16.0/esp32/esp_radio/esp_now/index.html
 
+// ESPNOW in detail
+https://cdn.prod.website-files.com/645a4534705010e2cb244f50/67e3ab1eec0b2be8f630f641_Nozomi-Networks-WP-ESP-NOW.pdf
