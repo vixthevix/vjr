@@ -23,6 +23,8 @@ use embassy_sync::{
     blocking_mutex::raw::NoopRawMutex
 };
 
+use embassy_futures::*;
+
 use static_cell::StaticCell;
 
 use esp_hal::gpio::{
@@ -87,7 +89,7 @@ async fn print_task() {
 }
 
 #[embassy_executor::task] 
-async fn led_task(mut led: esp_hal::gpio::Output<'static>) -> ! {
+async fn led_task(mut led: Output<'static>) -> ! {
     loop {
         led.toggle();
         Timer::after(Duration::from_millis(500)).await;
@@ -121,6 +123,95 @@ async fn rx_task(rx: Receiver<'static, NoopRawMutex, ChannelMessage, 5>) -> ! {
             ChannelMessage::Even(n) => info!("Even received: {n}"),
             ChannelMessage::Odd(n)  => info!("Odd received: {n}"),
         }
+    }
+}
+
+
+struct ScreenPinOut<'a> {
+    pub spi2: esp_hal::peripherals::SPI2  <'a>, 
+    pub mosi: esp_hal::peripherals::GPIO23<'a>,
+    pub sck : esp_hal::peripherals::GPIO18<'a>,
+    pub cs  : esp_hal::peripherals::GPIO15<'a>,
+    pub res : esp_hal::peripherals::GPIO4 <'a>,
+    pub dc  : esp_hal::peripherals::GPIO2 <'a>,
+}
+
+// Macro to take ownership of peripherals
+macro_rules! screenpinout_new {
+    ($p:expr) => {
+        ScreenPinOut {
+            spi2: $p.SPI2  ,
+            mosi: $p.GPIO23,
+            sck:  $p.GPIO18,
+            cs:   $p.GPIO15,
+            res:  $p.GPIO4 ,
+            dc:   $p.GPIO2 ,
+        }
+    };
+}
+
+
+static SPI_SCREEN_BUFFER: StaticCell<[u8; 512]> = StaticCell::new();
+
+#[embassy_executor::task]
+async fn screen_task(pins: ScreenPinOut<'static>) -> ! {
+    
+    // Set up the screen
+    
+    // SPI specific pins
+    let spi = Spi::new(
+        pins.spi2,
+        SpiConfig::default()
+            .with_frequency(Rate::from_mhz(60))
+            .with_mode(SpiMode::_0),
+    )
+    .unwrap()
+    .with_sck(pins.sck)
+    .with_mosi(pins.mosi);
+    
+    // Display specific pins
+    let cs  = Output::new(pins.cs , Level::Low, OutputConfig::default());
+    let dc  = Output::new(pins.dc , Level::Low, OutputConfig::default());
+    let res = Output::new(pins.res, Level::Low, OutputConfig::default());
+    
+    // Claim the statically allocated buffer
+    let buffer = SPI_SCREEN_BUFFER.init([0_u8; 512]);
+
+    // Linking into display interface
+    let spi_dev   = ExclusiveDevice::new_no_delay(spi, cs).unwrap();
+    let interface = SpiInterface::new(spi_dev, dc, buffer.as_mut_slice());
+    
+    let mut delay = Delay::new();
+    let mut display = Builder::new(ILI9341Rgb565, interface)
+        .reset_pin(res)
+        .invert_colors(ColorInversion::Inverted) 
+        .color_order(ColorOrder::Bgr)
+        .init(&mut delay).unwrap();
+    
+    display.clear(rgb(0, 0, 0)).unwrap(); // Black
+
+    // Create a fun display!
+
+    let mut r: u16 = 0;
+    let mut g: u16 = 0;
+    let mut b: u16 = 0;
+
+    let fps  : u8  = 60;
+    let _delay: u16 = ((1 as f32 / fps as f32) * 1_000.0) as u16;
+    
+    let mut i: u16 = 0;
+
+    loop {
+        display.clear(rgb(r as u8, g as u8, b as u8)).unwrap();
+        
+        r = (i) % 255;
+        g = (i * 2) % 255;
+        b = (i * 4) % 255;
+        
+        i = (i + 10) % 255;
+        
+        // Let other tasks run
+        yield_now().await;
     }
 }
 
@@ -172,42 +263,8 @@ async fn main(spawner: Spawner) {
     let config = esp_hal::Config::default().with_cpu_clock(CpuClock::max());
     let peripherals = esp_hal::init(config);
     
-
-    // Initialise the SPI display
-
-    // SPI specific pins
-    let spi = Spi::new(
-        peripherals.SPI2,
-        SpiConfig::default()
-            .with_frequency(Rate::from_mhz(60))
-            .with_mode(SpiMode::_0),
-    )
-    .unwrap()
-    .with_sck(peripherals.GPIO18)
-    .with_mosi(peripherals.GPIO23);
-    
-    // Display specific pins
-    let cs  = Output::new(peripherals.GPIO15, Level::Low, OutputConfig::default());
-    let dc  = Output::new(peripherals.GPIO2 , Level::Low, OutputConfig::default());
-    let res = Output::new(peripherals.GPIO4 , Level::Low, OutputConfig::default());
-    
-    // Display pixel buffer 
-    let mut buffer = [0_u8; 512];
-
-    // Linking into display interface
-    let spi_dev = ExclusiveDevice::new_no_delay(spi, cs).unwrap();
-    let interface = SpiInterface::new(spi_dev, dc, &mut buffer);
-    
-    let mut delay = Delay::new();
-    let mut display = Builder::new(ILI9341Rgb565, interface)
-        .reset_pin(res)
-        .invert_colors(ColorInversion::Inverted) 
-        .color_order(ColorOrder::Bgr)
-        .init(&mut delay).unwrap();
-    
-    display.clear(rgb(220, 20, 60)).unwrap();
-
-    
+    // Set up things needed for SPI screen
+    let screen_pinout = screenpinout_new!(peripherals);
 
     // peripherals gives us access to the GPIO pins
 //    let led = esp_hal::gpio::Output::new(
@@ -249,7 +306,7 @@ async fn main(spawner: Spawner) {
     spawner.spawn(tx_even_task(tx_even).unwrap());
     spawner.spawn(tx_odd_task(tx_odd)  .unwrap());
     spawner.spawn(rx_task(rx)          .unwrap());
-    
+    spawner.spawn(screen_task(screen_pinout) .unwrap()); 
 
     // for inspiration have a look at the examples at https://github.com/esp-rs/esp-hal/tree/esp-hal-v1.2.2/examples
 }
