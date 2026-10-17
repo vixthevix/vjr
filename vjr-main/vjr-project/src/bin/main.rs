@@ -25,6 +25,44 @@ use embassy_sync::{
 
 use static_cell::StaticCell;
 
+use esp_hal::gpio::{
+    Level,
+    Output,
+    OutputConfig,
+};
+
+use embedded_hal_bus::spi::ExclusiveDevice;
+
+use esp_hal::{
+    delay::Delay,
+    time::Rate,
+    spi::{
+        master::{
+            Config as SpiConfig,
+            Spi,
+        },
+        Mode as SpiMode,
+    },
+};
+
+use mipidsi::{
+    interface::SpiInterface,
+    options::{
+        ColorInversion, // Corrects colour
+        ColorOrder,     // RGB <-> BGR
+    }, 
+    Builder,
+    models::ILI9341Rgb565 // Fairly sure this is the right one
+};
+
+use embedded_graphics_core::{
+    pixelcolor::{
+        // RgbColor, // Trait
+        Rgb565 as RGB // We are only really dealing with rgb565
+    },
+    draw_target::DrawTarget, // Trait
+};
+
 extern crate alloc;
 
 // This creates a default app-descriptor required by the esp-idf bootloader.
@@ -87,6 +125,33 @@ async fn rx_task(rx: Receiver<'static, NoopRawMutex, ChannelMessage, 5>) -> ! {
 }
 
 
+/*
+Helper function for converting RGB888 into corresponding RGB565.
+*/
+fn rgb(r: u8, g: u8, b: u8) -> RGB {
+    // Ratios between 888 and 565
+    let r_k: f32 = 0.122;
+    let g_k: f32 = 0.247;
+    let b_k: f32 = 0.122;
+    
+    // Apply transformation
+    let r_t: f32 = r as f32 * r_k;
+    let g_t: f32 = g as f32 * g_k;
+    let b_t: f32 = b as f32 * b_k;
+    
+    // Cast to byte
+    let r_byte: u8 = r_t as u8; 
+    let g_byte: u8 = g_t as u8; 
+    let b_byte: u8 = b_t as u8; 
+    
+
+    RGB::new(
+        r_byte,
+        g_byte,
+        b_byte
+    )
+}
+
 
 // Memory Pin for async task communication channel.
 static CHANNEL: StaticCell<Channel<NoopRawMutex, ChannelMessage, 5>> = StaticCell::new();
@@ -107,12 +172,49 @@ async fn main(spawner: Spawner) {
     let config = esp_hal::Config::default().with_cpu_clock(CpuClock::max());
     let peripherals = esp_hal::init(config);
     
+
+    // Initialise the SPI display
+
+    // SPI specific pins
+    let spi = Spi::new(
+        peripherals.SPI2,
+        SpiConfig::default()
+            .with_frequency(Rate::from_mhz(60))
+            .with_mode(SpiMode::_0),
+    )
+    .unwrap()
+    .with_sck(peripherals.GPIO18)
+    .with_mosi(peripherals.GPIO23);
+    
+    // Display specific pins
+    let cs  = Output::new(peripherals.GPIO15, Level::Low, OutputConfig::default());
+    let dc  = Output::new(peripherals.GPIO2 , Level::Low, OutputConfig::default());
+    let res = Output::new(peripherals.GPIO4 , Level::Low, OutputConfig::default());
+    
+    // Display pixel buffer 
+    let mut buffer = [0_u8; 512];
+
+    // Linking into display interface
+    let spi_dev = ExclusiveDevice::new_no_delay(spi, cs).unwrap();
+    let interface = SpiInterface::new(spi_dev, dc, &mut buffer);
+    
+    let mut delay = Delay::new();
+    let mut display = Builder::new(ILI9341Rgb565, interface)
+        .reset_pin(res)
+        .invert_colors(ColorInversion::Inverted) 
+        .color_order(ColorOrder::Bgr)
+        .init(&mut delay).unwrap();
+    
+    display.clear(rgb(220, 20, 60)).unwrap();
+
+    
+
     // peripherals gives us access to the GPIO pins
-    let led = esp_hal::gpio::Output::new(
-        peripherals.GPIO23,                    // D23 on dev board
-        esp_hal::gpio::Level::Low,             // Voltage
-        esp_hal::gpio::OutputConfig::default() // Config used
-    );
+//    let led = esp_hal::gpio::Output::new(
+//        peripherals.GPIO23,                    // D23 on dev board
+//        esp_hal::gpio::Level::Low,             // Voltage
+//        esp_hal::gpio::OutputConfig::default() // Config used
+//    );
 
     esp_alloc::heap_allocator!(#[esp_hal::ram(reclaimed)] size: 98768);
 
@@ -142,7 +244,7 @@ async fn main(spawner: Spawner) {
     let tx_odd  = tx.clone();
 
     // spawner.spawn(print_task() .unwrap());
-    spawner.spawn(led_task(led).unwrap());
+    // spawner.spawn(led_task(led).unwrap());
     
     spawner.spawn(tx_even_task(tx_even).unwrap());
     spawner.spawn(tx_odd_task(tx_odd)  .unwrap());

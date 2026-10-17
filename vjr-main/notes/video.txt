@@ -92,5 +92,7 @@ Other crates to consider:
 
 https://crates.io/crates/embedded-graphics
 https://crates.io/crates/display-interface-spi
+https://crates.io/crates/esp-display-interface-spi-dma/0.2.0 (would replace the previous crate)
+
 
 
