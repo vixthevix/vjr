@@ -14,6 +14,8 @@ use esp_hal::clock::CpuClock;
 use esp_hal::timer::timg::TimerGroup;
 use log::info;
 
+use esp_hal::gpio::Output;
+
 use embassy_sync::{
     channel::{
         Channel,
@@ -27,43 +29,9 @@ use embassy_futures::*;
 
 use static_cell::StaticCell;
 
-use esp_hal::gpio::{
-    Level,
-    Output,
-    OutputConfig,
-};
 
-use embedded_hal_bus::spi::ExclusiveDevice;
-
-use esp_hal::{
-    delay::Delay,
-    time::Rate,
-    spi::{
-        master::{
-            Config as SpiConfig,
-            Spi,
-        },
-        Mode as SpiMode,
-    },
-};
-
-use mipidsi::{
-    interface::SpiInterface,
-    options::{
-        ColorInversion, // Corrects colour
-        ColorOrder,     // RGB <-> BGR
-    }, 
-    Builder,
-    models::ILI9341Rgb565 // Fairly sure this is the right one
-};
-
-use embedded_graphics_core::{
-    pixelcolor::{
-        // RgbColor, // Trait
-        Rgb565 as RGB // We are only really dealing with rgb565
-    },
-    draw_target::DrawTarget, // Trait
-};
+use crate::video::base::*;
+pub mod video;
 
 extern crate alloc;
 
@@ -127,68 +95,10 @@ async fn rx_task(rx: Receiver<'static, NoopRawMutex, ChannelMessage, 5>) -> ! {
 }
 
 
-struct ScreenPinOut<'a> {
-    pub spi2: esp_hal::peripherals::SPI2  <'a>, 
-    pub mosi: esp_hal::peripherals::GPIO23<'a>,
-    pub sck : esp_hal::peripherals::GPIO18<'a>,
-    pub cs  : esp_hal::peripherals::GPIO15<'a>,
-    pub res : esp_hal::peripherals::GPIO4 <'a>,
-    pub dc  : esp_hal::peripherals::GPIO2 <'a>,
-}
-
-// Macro to take ownership of peripherals
-macro_rules! screenpinout_new {
-    ($p:expr) => {
-        ScreenPinOut {
-            spi2: $p.SPI2  ,
-            mosi: $p.GPIO23,
-            sck:  $p.GPIO18,
-            cs:   $p.GPIO15,
-            res:  $p.GPIO4 ,
-            dc:   $p.GPIO2 ,
-        }
-    };
-}
-
-
-static SPI_SCREEN_BUFFER: StaticCell<[u8; 512]> = StaticCell::new();
-
 #[embassy_executor::task]
-async fn screen_task(pins: ScreenPinOut<'static>) -> ! {
+async fn screen_task(mut display: Display<'static>) -> ! {
     
-    // Set up the screen
-    
-    // SPI specific pins
-    let spi = Spi::new(
-        pins.spi2,
-        SpiConfig::default()
-            .with_frequency(Rate::from_mhz(60))
-            .with_mode(SpiMode::_0),
-    )
-    .unwrap()
-    .with_sck(pins.sck)
-    .with_mosi(pins.mosi);
-    
-    // Display specific pins
-    let cs  = Output::new(pins.cs , Level::Low, OutputConfig::default());
-    let dc  = Output::new(pins.dc , Level::Low, OutputConfig::default());
-    let res = Output::new(pins.res, Level::Low, OutputConfig::default());
-    
-    // Claim the statically allocated buffer
-    let buffer = SPI_SCREEN_BUFFER.init([0_u8; 512]);
-
-    // Linking into display interface
-    let spi_dev   = ExclusiveDevice::new_no_delay(spi, cs).unwrap();
-    let interface = SpiInterface::new(spi_dev, dc, buffer.as_mut_slice());
-    
-    let mut delay = Delay::new();
-    let mut display = Builder::new(ILI9341Rgb565, interface)
-        .reset_pin(res)
-        .invert_colors(ColorInversion::Inverted) 
-        .color_order(ColorOrder::Bgr)
-        .init(&mut delay).unwrap();
-    
-    display.clear(rgb(0, 0, 0)).unwrap(); // Black
+    display.fill(Display::rgb(0, 0, 0)); // Black
 
     // Create a fun display!
 
@@ -202,7 +112,7 @@ async fn screen_task(pins: ScreenPinOut<'static>) -> ! {
     let mut i: u16 = 0;
 
     loop {
-        display.clear(rgb(r as u8, g as u8, b as u8)).unwrap();
+        display.fill(Display::rgb(r as u8, g as u8, b as u8));
         
         r = (i) % 255;
         g = (i * 2) % 255;
@@ -216,38 +126,13 @@ async fn screen_task(pins: ScreenPinOut<'static>) -> ! {
 }
 
 
-/*
-Helper function for converting RGB888 into corresponding RGB565.
-*/
-fn rgb(r: u8, g: u8, b: u8) -> RGB {
-    // Ratios between 888 and 565
-    let r_k: f32 = 0.122;
-    let g_k: f32 = 0.247;
-    let b_k: f32 = 0.122;
-    
-    // Apply transformation
-    let r_t: f32 = r as f32 * r_k;
-    let g_t: f32 = g as f32 * g_k;
-    let b_t: f32 = b as f32 * b_k;
-    
-    // Cast to byte
-    let r_byte: u8 = r_t as u8; 
-    let g_byte: u8 = g_t as u8; 
-    let b_byte: u8 = b_t as u8; 
-    
-
-    RGB::new(
-        r_byte,
-        g_byte,
-        b_byte
-    )
-}
-
-
 // Memory Pin for async task communication channel.
 static CHANNEL: StaticCell<Channel<NoopRawMutex, ChannelMessage, 5>> = StaticCell::new();
 
-
+// Static display buffers
+display_buffer_new!(DISPLAY_BUFFER_A);
+display_buffer_new!(DISPLAY_BUFFER_B);
+display_cmd_buffer_new!(DISPLAY_CMD_BUFFER);
 
 #[allow(
     clippy::large_stack_frames,
@@ -263,8 +148,13 @@ async fn main(spawner: Spawner) {
     let config = esp_hal::Config::default().with_cpu_clock(CpuClock::max());
     let peripherals = esp_hal::init(config);
     
-    // Set up things needed for SPI screen
-    let screen_pinout = screenpinout_new!(peripherals);
+    // Display setup
+    let pinout     = display_pinout_new!(peripherals);
+    let buffer_a   = display_buffer_init!(DISPLAY_BUFFER_A);
+    let buffer_b   = display_buffer_init!(DISPLAY_BUFFER_B);
+    let cmd_buffer = display_cmd_buffer_init!(DISPLAY_CMD_BUFFER);
+    
+    let display = Display::new(pinout, buffer_a, buffer_b, cmd_buffer);
 
     // peripherals gives us access to the GPIO pins
 //    let led = esp_hal::gpio::Output::new(
@@ -306,7 +196,7 @@ async fn main(spawner: Spawner) {
     spawner.spawn(tx_even_task(tx_even).unwrap());
     spawner.spawn(tx_odd_task(tx_odd)  .unwrap());
     spawner.spawn(rx_task(rx)          .unwrap());
-    spawner.spawn(screen_task(screen_pinout) .unwrap()); 
+    spawner.spawn(screen_task(display).unwrap()); 
 
     // for inspiration have a look at the examples at https://github.com/esp-rs/esp-hal/tree/esp-hal-v1.2.2/examples
 }

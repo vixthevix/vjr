@@ -1,0 +1,253 @@
+    Checking vjr-project v0.1.0 (/home/vixthevix/Documents/code/personal/vjr/vjr-main/vjr-project)
+warning: unused imports: `Level` and `OutputConfig`
+  --> src/main.rs:31:5
+   |
+31 |     Level,
+   |     ^^^^^
+32 |     Output,
+33 |     OutputConfig,
+   |     ^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `embedded_hal_bus::spi::ExclusiveDevice`
+  --> src/main.rs:36:5
+   |
+36 | use embedded_hal_bus::spi::ExclusiveDevice;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `Config as SpiConfig`, `Mode as SpiMode`, `Spi`, `delay::Delay`, and `time::Rate`
+  --> src/main.rs:39:5
+   |
+39 |     delay::Delay,
+   |     ^^^^^^^^^^^^
+40 |     time::Rate,
+   |     ^^^^^^^^^^
+...
+43 |             Config as SpiConfig,
+   |             ^^^^^^^^^^^^^^^^^^^
+44 |             Spi,
+   |             ^^^
+45 |         },
+46 |         Mode as SpiMode,
+   |         ^^^^^^^^^^^^^^^
+
+warning: unused imports: `Builder`, `ColorInversion`, `ColorOrder`, `interface::SpiInterface`, and `models::ILI9341Rgb565`
+  --> src/main.rs:51:5
+   |
+51 |     interface::SpiInterface,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^
+52 |     options::{
+53 |         ColorInversion, // Corrects colour
+   |         ^^^^^^^^^^^^^^
+54 |         ColorOrder,     // RGB <-> BGR
+   |         ^^^^^^^^^^
+55 |     }, 
+56 |     Builder,
+   |     ^^^^^^^
+57 |     models::ILI9341Rgb565 // Fairly sure this is the right one
+   |     ^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `Rgb565 as RGB` and `draw_target::DrawTarget`
+  --> src/main.rs:63:9
+   |
+63 |         Rgb565 as RGB // We are only really dealing with rgb565
+   |         ^^^^^^^^^^^^^
+64 |     },
+65 |     draw_target::DrawTarget, // Trait
+   |     ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `embassy_executor::Spawner`
+ --> src/video/base.rs:7:5
+  |
+7 | use embassy_executor::Spawner;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `Duration` and `Timer`
+ --> src/video/base.rs:8:20
+  |
+8 | use embassy_time::{Duration, Timer};
+  |                    ^^^^^^^^  ^^^^^
+
+warning: unused import: `esp_hal::clock::CpuClock`
+  --> src/video/base.rs:10:5
+   |
+10 | use esp_hal::clock::CpuClock;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `esp_hal::timer::timg::TimerGroup`
+  --> src/video/base.rs:11:5
+   |
+11 | use esp_hal::timer::timg::TimerGroup;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `log::info`
+  --> src/video/base.rs:12:5
+   |
+12 | use log::info;
+   |     ^^^^^^^^^
+
+warning: unused imports: `Channel`, `Receiver`, `Sender`, and `blocking_mutex::raw::NoopRawMutex`
+  --> src/video/base.rs:16:9
+   |
+16 |         Channel,
+   |         ^^^^^^^
+17 |         Receiver,
+   |         ^^^^^^^^
+18 |         Sender
+   |         ^^^^^^
+19 |     },
+20 |     blocking_mutex::raw::NoopRawMutex
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `embassy_futures::*`
+  --> src/video/base.rs:23:5
+   |
+23 | use embassy_futures::*;
+   |     ^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `static_cell::StaticCell`
+  --> src/video/base.rs:25:5
+   |
+25 | use static_cell::StaticCell;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0277]: the trait bound `Rgb565: Model` is not satisfied
+   --> src/video/base.rs:137:16
+    |
+137 |     interface: DisplayScreen<'a>, // The thing made by Builder::new()
+    |                ^^^^^^^^^^^^^^^^^ the trait `Model` is not implemented for `Rgb565`
+    |
+    = help: the following other types implement trait `Model`:
+              GC9107
+              GC9A01
+              ILI9225Rgb565
+              ILI9341Rgb565
+              ILI9341Rgb666
+              ILI9342CRgb565
+              ILI9342CRgb666
+              ILI9486Rgb565
+            and 7 others
+note: required by a bound in `mipidsi::Display`
+   --> /home/vixthevix/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/mipidsi-0.10.0/src/lib.rs:144:12
+    |
+141 | pub struct Display<DI, MODEL, RST>
+    |            ------- required by a bound in this struct
+...
+144 |     MODEL: Model,
+    |            ^^^^^ required by this bound in `Display`
+
+error[E0277]: the trait bound `esp_hal::peripherals::SPI2<'a>: DriverMode` is not satisfied
+   --> src/video/base.rs:137:16
+    |
+137 |     interface: DisplayScreen<'a>, // The thing made by Builder::new()
+    |                ^^^^^^^^^^^^^^^^^ the trait `DriverMode` is not implemented for `esp_hal::peripherals::SPI2<'a>`
+    |
+help: the following other types implement trait `DriverMode`
+   --> /home/vixthevix/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/esp-hal-1.2.2/src/lib.rs:562:1
+    |
+562 | impl crate::DriverMode for Blocking {}
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `Blocking`
+563 | impl crate::DriverMode for Async {}
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `Async`
+note: required by a bound in `esp_hal::spi::master::Spi`
+   --> /home/vixthevix/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/esp-hal-1.2.2/src/spi/master/mod.rs:697:24
+    |
+697 | pub struct Spi<'d, Dm: DriverMode> {
+    |                        ^^^^^^^^^^ required by this bound in `Spi`
+
+error[E0308]: mismatched types
+   --> src/video/base.rs:178:13
+    |
+178 |             interface
+    |             ^^^^^^^^^ expected `esp_hal::peripherals::SPI2<'_>`, found `Blocking`
+    |
+    = note: expected struct `Display<SpiInterface<'_, ..., ...>, ..., ...>`
+               found struct `mipidsi::Display<SpiInterface<'_, ExclusiveDevice<esp_hal::spi::master::Spi<'_, Blocking>, Output<'_>, _>, Output<'_>>, ILI9341Rgb565, Output<'_>>`
+    = note: the full name for the type has been written to '/home/vixthevix/Documents/code/personal/vjr/vjr-main/vjr-project/target/xtensa-esp32-none-elf/debug/deps/vjr_project-b9faa68b3e09aa06.long-type-9059615580020458920.txt'
+    = note: consider using `--verbose` to print the full type name to the console
+
+error[E0277]: the trait bound `Rgb565: Model` is not satisfied
+   --> src/video/base.rs:178:13
+    |
+178 |             interface
+    |             ^^^^^^^^^ the trait `Model` is not implemented for `Rgb565`
+    |
+    = help: the following other types implement trait `Model`:
+              GC9107
+              GC9A01
+              ILI9225Rgb565
+              ILI9341Rgb565
+              ILI9341Rgb666
+              ILI9342CRgb565
+              ILI9342CRgb666
+              ILI9486Rgb565
+            and 7 others
+note: required by a bound in `mipidsi::Display`
+   --> /home/vixthevix/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/mipidsi-0.10.0/src/lib.rs:144:12
+    |
+141 | pub struct Display<DI, MODEL, RST>
+    |            ------- required by a bound in this struct
+...
+144 |     MODEL: Model,
+    |            ^^^^^ required by this bound in `Display`
+
+error[E0277]: the trait bound `esp_hal::peripherals::SPI2<'_>: DriverMode` is not satisfied
+   --> src/video/base.rs:178:13
+    |
+178 |             interface
+    |             ^^^^^^^^^ the trait `DriverMode` is not implemented for `esp_hal::peripherals::SPI2<'_>`
+    |
+help: the following other types implement trait `DriverMode`
+   --> /home/vixthevix/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/esp-hal-1.2.2/src/lib.rs:562:1
+    |
+562 | impl crate::DriverMode for Blocking {}
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `Blocking`
+563 | impl crate::DriverMode for Async {}
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `Async`
+note: required by a bound in `esp_hal::spi::master::Spi`
+   --> /home/vixthevix/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/esp-hal-1.2.2/src/spi/master/mod.rs:697:24
+    |
+697 | pub struct Spi<'d, Dm: DriverMode> {
+    |                        ^^^^^^^^^^ required by this bound in `Spi`
+
+error[E0599]: the method `clear` exists for struct `Display<SpiInterface<'a, ..., ...>, ..., ...>`, but its trait bounds were not satisfied
+   --> src/video/base.rs:210:24
+    |
+210 |         self.interface.clear(colour).unwrap();
+    |                        ^^^^^ method cannot be called on `Display<SpiInterface<'a, ..., ...>, ..., ...>` due to unsatisfied trait bounds
+    |
+   ::: /home/vixthevix/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/embedded-hal-bus-0.3.0/src/spi/exclusive.rs:19:1
+    |
+ 19 | pub struct ExclusiveDevice<BUS, CS, D> {
+    | -------------------------------------- doesn't satisfy `_: SpiDevice`
+    |
+   ::: /home/vixthevix/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/mipidsi-0.10.0/src/lib.rs:141:1
+    |
+141 | pub struct Display<DI, MODEL, RST>
+    | ---------------------------------- doesn't satisfy `_: DrawTarget`
+    |
+   ::: /home/vixthevix/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/mipidsi-0.10.0/src/interface/spi.rs:23:1
+    |
+ 23 | pub struct SpiInterface<'a, SPI, DC> {
+    | ------------------------------------ doesn't satisfy `_: Interface`
+    |
+   ::: /home/vixthevix/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/embedded-graphics-core-0.4.1/src/pixelcolor/rgb_color.rs:72:9
+    |
+ 72 |         pub struct $type($storage_type);
+    |         -------------------------------- doesn't satisfy `Rgb565: Model`
+    |
+    = note: the following trait bounds were not satisfied:
+            `SpiInterface<'a, ExclusiveDevice<esp_hal::spi::master::Spi<'a, esp_hal::peripherals::SPI2<'a>>, Output<'a>, NoDelay>, Output<'a>>: mipidsi::interface::Interface`
+            which is required by `mipidsi::Display<SpiInterface<'a, ExclusiveDevice<esp_hal::spi::master::Spi<'a, esp_hal::peripherals::SPI2<'a>>, Output<'a>, NoDelay>, Output<'a>>, Rgb565, Output<'a>>: DrawTarget`
+            `Rgb565: Model`
+            which is required by `mipidsi::Display<SpiInterface<'a, ExclusiveDevice<esp_hal::spi::master::Spi<'a, esp_hal::peripherals::SPI2<'a>>, Output<'a>, NoDelay>, Output<'a>>, Rgb565, Output<'a>>: DrawTarget`
+            `ExclusiveDevice<esp_hal::spi::master::Spi<'a, esp_hal::peripherals::SPI2<'a>>, Output<'a>, NoDelay>: embedded_hal::spi::SpiDevice`
+            which is required by `mipidsi::Display<SpiInterface<'a, ExclusiveDevice<esp_hal::spi::master::Spi<'a, esp_hal::peripherals::SPI2<'a>>, Output<'a>, NoDelay>, Output<'a>>, Rgb565, Output<'a>>: DrawTarget`
+    = note: the full name for the type has been written to '/home/vixthevix/Documents/code/personal/vjr/vjr-main/vjr-project/target/xtensa-esp32-none-elf/debug/deps/vjr_project-b9faa68b3e09aa06.long-type-3095188268325145269.txt'
+    = note: consider using `--verbose` to print the full type name to the console
+
+Some errors have detailed explanations: E0277, E0308, E0599.
+For more information about an error, try `rustc --explain E0277`.
+warning: `vjr-project` (bin "vjr-project") generated 13 warnings
+error: could not compile `vjr-project` (bin "vjr-project") due to 6 previous errors; 13 warnings emitted
