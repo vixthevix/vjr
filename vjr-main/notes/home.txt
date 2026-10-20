@@ -1,0 +1,19 @@
+###################
+# WHAT IS A HOME? #
+###################
+
+The Home menu is a program ran on Core 1 of the ESP32. It is the other half of the BIOS, which also consists of
+the background processes (see bios.txt for more).
+
+Home is how users can load in games from the SD card onto their systems, as well as accessing system settings,
+customization, test programs etc.
+
+The Home button exists as a way to pause the current ROM running and access the Home menu.
+
+When the Home menu is running, it acts like a normal program just like a game, except:
+
+    - It is running on Core 1, not Core 2. This makes it not replace the current execution of the loaded ROM.
+    - It does not communicate with the hardware through the BIOS API, but rather directly due to being in Core 1.
+    - Allocates things into RAM for itself, and when a game is loaded/resumed, it releases them from RAM.
+
+

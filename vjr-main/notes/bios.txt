@@ -1,0 +1,100 @@
+###################
+# WHAT IS A BIOS? #
+###################
+
+BIOS stands for 'Basic Input Output System'. In relation to the vjr, it is the program that is constantly 
+running on the ESP32.
+
+The ESP32 WROOM 32 model contains a dual core CPU, meaning we have two physicals strands of execution for true 
+parallelism.
+
+The BIOS runs on Core 1, and the loaded game ROM runs on Core 2.
+
+
+###############
+# SPLIT ROLES #
+###############
+
+The BIOS can act in two ways, as a background process and as the home menu.
+This txt file will focus primarily on the BIOS as a background process.
+
+The BIOS' roles are:
+    - Initialising static memory for peripherals, such as video buffers, audio buffers etc.
+    - Directly communicating with the hardware, with custom code and imported Rust crates.
+    - Listening for signals sent by the loaded ROM (more below)
+
+As a background process, the BIOS should also not allocate into RAM besides the initial static memory.
+Or, at the very least, minimise RAM allocation.
+This is to conserve as much RAM as possible for the game ROM to use for itself.
+
+The ROM's roles are:
+    - Main application logic.
+    - Sending signals to BIOS to interract with hardware.
+
+
+#########################
+# COMMUNICATION SIGNALS #
+#########################
+
+A loaded ROM handles all the logic of the game, including the game loop. This can be programmed using standard
+embedded Rust.
+
+To utilise the hardware, Core 2 must communicate with Core 1 via what I will call a Signal. In PC OS terms, 
+this is somewhat equivalent to a system call.
+
+For Signals to work, we need to establish a Receiver and Transmitter for the Signal Channel. Signals along 
+Channels operate using enums that encapsulate specific commands and payloads that the BIOS can understand and 
+perform things with.
+
+For example, say the ROM wants to perform things on the Video Display; it would need to focus on the 
+Display Channel and send a specific enum (with payload, if needed) to communicate a specific want.
+
+If the ROM wants to clear the screen with a specific colour, they could send DisplaySignal::Fill(RED) on
+the Display Channel. The BIOS would receive it, interpret it, and perform a screen fill accordingly.
+
+Alternatively, they could send DisplaySignal::Draw, and the BIOS would begin drawing the current Scene to the 
+display.
+
+The BIOS listens for Signals asynchronously with Embassy, and performs tasks asynchrounsly as well.
+
+########################
+# TRANSFERRING SIGNALS #
+########################
+
+Signal Channels are created by the BIOS when a game is loaded in. It keeps the Receiver ends and sends over the
+Transmitting ends to the ROM.
+
+For now, the BIOS is strictly a Receiver, and the opposite is true for the ROM.
+
+The general workflow for this is as the following:
+
+    1) An Embassy Channel is statically created in the BIOS. Both Cores can access this memory.
+    2) In both the BIOS code and the ROM code, have a struct definition for the BIOS API.
+       This contains function pointers to functions within the BIOS codespace.
+       Specifically, these functions contain code for communicating with the Embassy Channel made earlier,
+       using BIOS Signal enums.
+    3) Create a struct out of this BIOS API definition. When running the ROM from the BIOS,
+       cast the memory address start of the ROM in Flash to a function taking in a BIOS API, and run it.
+       Now, the ROM has a BIOS API object that can call functions that correlate to BIOS actions.
+
+This method removes the need for including Embassy in the ROM code, though it can be included for 
+game concurrency maybe idk don't count on it.
+
+Function pointers are the way to go!
+
+
+################
+# WHY SIGNALS? #
+################
+
+Signals are vital for the vjr because they ensure that the loaded ROM is not filled with all of the functionality
+needed to interact with the hardware, which introduces bloat to the ROM and can make actual applications smaller.
+
+I predict that, if storing the ROM into the ESP32 Flash storage, we have about 2 to 3 MB of maximum ROM capacity.
+Having most of this space taken up by hardware utilities is a waste, so let the BIOS handle it, and communicate
+with the BIOS via Signals to utilise the hardware indirectly.
+
+It could introduce slowness in programs due to that communication layer, but the potential boost to ROM sizes
+is too good to pass up.
+
+

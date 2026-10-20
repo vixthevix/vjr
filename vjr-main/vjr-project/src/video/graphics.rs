@@ -17,11 +17,103 @@ use embedded_graphics_core::{
     draw_target::DrawTarget, // Trait
 };
 
+use heapless::Vec;
+
 /*
 Base trait for all sprites that can be drawn to the screen.
 */
 pub trait Sprite {
     fn draw(&self);
+}
+
+
+const SCENE_SPRITE_MAX: u16 = 64;
+
+/*
+Struct for looping through Sprites and drawing them.
+*/
+pub struct Scene {
+    sprites: Vec<*mut dyn Sprite, SCENE_SPRITE_MAX>;
+}
+
+impl Scene {
+    pub fn new() -> Self {
+        Self {
+            sprites: Vec::new(),
+        }
+    }
+    
+    /*
+    Adds a Sprite to the Scene, and returns a handle (index) to that Sprite.
+    */
+    pub fn add(&mut self, sprite: &mut dyn Sprite) -> u16 {
+        self.sprites.push(sprite as *mut dyn Sprite);
+        
+        (self.sprites.len() - 1) as u16
+    }
+    
+    pub fn add_at(&mut self, sprite: &mut dyn Sprite, index: u16) -> u16 {
+        self.sprites.insert(index, sprite as *mut dyn Sprite);
+
+        index
+    }
+
+    pub fn pop(&mut self) -> u16 {
+        self.sprites.pop();
+
+        (self.sprites.len() - 1) as u16
+    }
+    
+    pub fn pop_at(&mut self, index: u16) -> u16 {
+        self.sprites.remove(index.into());
+
+        index
+    }
+    
+    // Swap two Sprites around in a scene, changing drawing order.
+    pub fn swap(&mut self, a: u16, b: u16) -> (u16, u16) {
+        let temp = self.sprites[a];
+        let self.sprites[a] = self.sprites[b];
+        self.sprites[b] = temp;
+
+        (b, a)
+    }
+
+    pub fn shift_down(&mut self, index: u16, count: u16) -> u16 {
+        
+        let mut new_index = index;
+
+        for let i in 0..count {
+            (new_index, _) = self.swap(new_index, new_index - 1);
+        }
+
+        new_index
+    }
+    
+    pub fn shift_up(&mut self, index: u16, count: u16) -> u16 {
+        
+        let mut new_index = index;
+
+        for let i in 0..count {
+            (new_index, _) = self.swap(new_index, new_index + 1);
+        }
+
+        new_index
+    }
+
+    pub fn sprite_count(&self) -> u16 {
+        self.sprites.len() as u16
+    }
+    
+    // UNSAFE FUNCTION
+    // Dereferences pointer to draw to screen.
+    pub fn draw(&self) {
+        for &sprite in &self.sprites {
+            unsafe {
+                (*sprite).draw();
+            }
+        }
+    }
 }
 
 /*
@@ -132,21 +224,61 @@ Supports VIMG only for now.
 
 struct Image {
     pub pos: Coord2D,
-    pub width:  usize,
-    pub height: usize,
+    pub width:  u16,
+    pub height: u16,
+    pub compression: u8,
+    
+    pub meta: &'static [u8], // Metadata for compression and such.
     pub data: &'static [u8], // Essentially, a reference to the image data in flash.
+
 }
 
 impl Image {
     pub fn new(pos: Coord2D, data: &'static [u8]) -> Self {
         
         // Read the data for the header and extract information from it.
+        
+        // Find 'VIMG' guard
+        let guard = &data[0..4];
+        if ! guard == b"VIMG" {
+            panic!("Invalid VIMG, starting guard not present");
+        }
+
+        // Compression type stored in 1 byte
+        let compression: u8 = data[4];
+
+        // Width and height store in 2 bytes each.
+        let width  = u16::from_be_bytes([data[5], data[6]]);
+        let height = u16::from_be_bytes([data[7], data[8]]);
+
+
+        // Copy over metadata about the VIMG
+        // Metadata ends once VIMG end guard reached.
+        let mut i: usize = 9;
+        let mut meta_length: usize = 0;
+        loop {
+            let guard = &data[i..i+4];
+            if guard == b"VIMG" {
+                break;
+            }
+            meta_length += 1;
+            i += 1;
+        }
+        
+        let meta: &'static [u8] = &data[9..i];
+
+        // i has start index of VIMG, so add 4
+        i += 4;
+        let raw_data: &'static [u8] = &data[i..];
 
         Self {
             pos,
-            width: 0,
-            height: 0,
-            data
+            width,
+            height,
+            compression,
+
+            meta,
+            data: raw_data,
         }
     }
 }
