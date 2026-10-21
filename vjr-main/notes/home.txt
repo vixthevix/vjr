@@ -17,3 +17,27 @@ When the Home menu is running, it acts like a normal program just like a game, e
     - Allocates things into RAM for itself, and when a game is loaded/resumed, it releases them from RAM.
 
 
+
+################
+# HOME SIGNALS #
+################
+
+The Home menu runs on Core 1, so it does not use the BIOS API. Regardless, it will still use Signals
+to interact with asynchronous hardware peripherals.
+
+As mentioned in signals.txt, Display is different. Due to the synchronous nature of displaying, there is no Display
+Channel. A Scene is still required to draw objects to the screen, which we run Scene::draw to display to.
+
+But now, the nature of displaying is different across the ROM and the Home menu: the ROM uses the BIOS API 
+function pointer, while the Home uses SPI directly.
+
+To account for this, we will treat this with abstraction: suppose a generic DisplayBufferPusher that sends a 
+Display Buffer to a Display. In Rust, this is equivalent to a trait. We can define a BiosPusher struct in the BIOS
+code that inherits DisplayBufferPusher for interacting via SPI, and a RomPusher struct in the ROM code for interacting
+via the BIOS API function pointer.
+
+Getting the display to work correctly for the home menu and the ROM is very important.
+
+Additionally, to ensure ownership and safe code, it may be that the ROM and Home need to keep two video buffers each.
+This results in minimum 40 kB of RAM for video buffers, which is around 8% of the RAM (actually closer to 12% due to
+DRAM being 320 kB). This is unfortunately a trade-off I will have to make.

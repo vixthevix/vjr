@@ -1,0 +1,34 @@
+#############################
+# WHAT IS A SIGNAL, REALLY? #
+#############################
+
+Signals are asynchronous messages sent between Core 1 and Core 2.
+
+For Signals to work, we need to establish a Channel per peripheral, such as audio, analogue and digital inputs, 
+battery health etc.
+
+ONE EXCEPTION IS DISPLAY.
+
+Once these Channels have been made, Signal Functions are made that encapsulate a transaction, such as 
+requesting a sound to be played, or asking for the analogue state of a stick. These functions are defined in the BIOS.
+
+It is important to this, because we then make a BIOS API struct instance that we pass as an argument to the Core 2
+ROM, which executes as a function so we can in fact pass in a parameter.
+
+This BIOS API struct contains function pointers for the Signal Functions. The ROM does not need to know what these
+functions actually do, it just needs to be able to know what they look like, call them and expect a 
+result if necessary.
+
+This should be fine somewhat.
+
+
+#############################
+# WHY IS DISPLAY DIFFERENT? #
+#############################
+
+Because of our Double Row Buffering technique, displaying to the screen is strictly a synchronous, blocking task.
+
+We can still pass in a function pointer to the BIOS API for transmitting a row buffer to the display, but instead of
+sending a Signal to a theoretical Display Channel, we directly do SPI stuff in this function. 
+
+
