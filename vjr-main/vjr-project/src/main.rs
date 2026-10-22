@@ -30,10 +30,7 @@ use embassy_futures::*;
 use static_cell::StaticCell;
 
 
-use crate::video::{
-    base::*,
-    graphics::*,
-};
+use crate::video::*;
 pub mod video;
 
 
@@ -129,7 +126,16 @@ async fn screen_task(mut display: Display<'static>) -> ! {
     }
 }
 
+// Specific video buffer pusher for Home menu
+struct HomePusher {
+    display: &mut Display,
+}
 
+impl Pusher for HomePusher {
+    fn push(&mut self, buffer: &[u8; DISPLAY_BUFFER_SIZE], y_offset: u16) {
+        // Use SPI DMA to bush buffer to display.
+    }
+} 
 
 
 // Memory Pin for async task communication channel.
@@ -181,10 +187,16 @@ async fn main(spawner: Spawner) {
     
     // All right, time for a proper BIOS
     // Split into two sections: ROM Listener and Home Menu.
-
+    
     // For Home Menu, we will need a Scene for graphics
     
-    let mut home_scene = Scene::new();
+    let pusher = HomePusher {
+        &mut display,
+    };
+
+    let renderer = Renderer::new(pusher);
+
+    let mut home_scene = Scene::new(RGB::WHITE);
 
     let triangle = Triangle::new_equilateral(Coord2D::new(160, 120), 10)
         .with_outline(Display::rgb(135, 20, 45)
@@ -196,8 +208,7 @@ async fn main(spawner: Spawner) {
         loop { // Home menu
         
             
-
-            home_scene.draw();
+            renderer.draw_scene(&mut home_screen);
         }
         
         loop { // Background BIOS

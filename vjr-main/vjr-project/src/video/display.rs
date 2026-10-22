@@ -66,19 +66,6 @@ macro_rules! display_pinout_new {
     };
 }
 
-#[macro_export]
-macro_rules! display_buffer_new {
-    ($b:ident) => {
-        static $b: StaticCell<[u8; DISPLAY_BUFFER_SIZE]> = StaticCell::new();
-    }
-}
-
-#[macro_export]
-macro_rules! display_buffer_init {
-    ($b:expr) => {
-        $b.init([0_u8; DISPLAY_BUFFER_SIZE])
-    }
-}
 
 #[macro_export]
 macro_rules! display_cmd_buffer_new {
@@ -94,7 +81,6 @@ macro_rules! display_cmd_buffer_init {
     }
 }
 
-pub const DISPLAY_BUFFER_SIZE    : usize = 10240;
 pub const DISPLAY_CMD_BUFFER_SIZE: usize = 16;
 
 
@@ -113,17 +99,12 @@ pub type DisplayScreen <'a>= mipidsi::Display<DisplayInterface<'a>, ILI9341Rgb56
 General struct for the display.
 */
 pub struct Display<'a> {
-    buffer_a: &'static mut [u8; DISPLAY_BUFFER_SIZE],
-    buffer_b: &'static mut [u8; DISPLAY_BUFFER_SIZE],
-
     interface: DisplayScreen<'a>, // The thing made by Builder::new()
 }
 
 impl<'a> Display<'a> {
     pub fn new(
         pinout: PinOut<'a>, 
-        buffer_a: &'static mut [u8; DISPLAY_BUFFER_SIZE], 
-        buffer_b: &'static mut [u8; DISPLAY_BUFFER_SIZE],
         cmd_buffer: &'static mut [u8; DISPLAY_CMD_BUFFER_SIZE]
     ) -> Self {
         
@@ -155,8 +136,6 @@ impl<'a> Display<'a> {
             .init(&mut delay).unwrap();
 
         Display {
-            buffer_a,
-            buffer_b,
             interface
         }
     }
@@ -165,26 +144,10 @@ impl<'a> Display<'a> {
     Helper function for converting RGB888 into corresponding RGB565.
     */
     pub fn rgb(r: u8, g: u8, b: u8) -> RGB {
-        // Ratios between 888 and 565
-        let r_k: f32 = 0.122;
-        let g_k: f32 = 0.247;
-        let b_k: f32 = 0.122;
-        
-        // Apply transformation
-        let r_t: f32 = r as f32 * r_k;
-        let g_t: f32 = g as f32 * g_k;
-        let b_t: f32 = b as f32 * b_k;
-        
-        // Cast to byte
-        let r_byte: u8 = r_t as u8; 
-        let g_byte: u8 = g_t as u8; 
-        let b_byte: u8 = b_t as u8; 
-        
-
         RGB::new(
-            r_byte,
-            g_byte,
-            b_byte
+            r >> 3,
+            g >> 2,
+            b >> 3,
         )
     }
     
