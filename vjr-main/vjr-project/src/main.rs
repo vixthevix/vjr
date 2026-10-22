@@ -30,8 +30,12 @@ use embassy_futures::*;
 use static_cell::StaticCell;
 
 
-use crate::video::base::*;
+use crate::video::{
+    base::*,
+    graphics::*,
+};
 pub mod video;
+
 
 extern crate alloc;
 
@@ -126,6 +130,8 @@ async fn screen_task(mut display: Display<'static>) -> ! {
 }
 
 
+
+
 // Memory Pin for async task communication channel.
 static CHANNEL: StaticCell<Channel<NoopRawMutex, ChannelMessage, 5>> = StaticCell::new();
 
@@ -148,20 +154,6 @@ async fn main(spawner: Spawner) {
     let config = esp_hal::Config::default().with_cpu_clock(CpuClock::max());
     let peripherals = esp_hal::init(config);
     
-    // Display setup
-    let pinout     = display_pinout_new!(peripherals);
-    let buffer_a   = display_buffer_init!(DISPLAY_BUFFER_A);
-    let buffer_b   = display_buffer_init!(DISPLAY_BUFFER_B);
-    let cmd_buffer = display_cmd_buffer_init!(DISPLAY_CMD_BUFFER);
-    
-    let display = Display::new(pinout, buffer_a, buffer_b, cmd_buffer);
-
-    // peripherals gives us access to the GPIO pins
-//    let led = esp_hal::gpio::Output::new(
-//        peripherals.GPIO23,                    // D23 on dev board
-//        esp_hal::gpio::Level::Low,             // Voltage
-//        esp_hal::gpio::OutputConfig::default() // Config used
-//    );
 
     esp_alloc::heap_allocator!(#[esp_hal::ram(reclaimed)] size: 98768);
 
@@ -174,6 +166,48 @@ async fn main(spawner: Spawner) {
         esp_radio::wifi::WifiController::new(peripherals.WIFI, Default::default())
             .expect("Failed to initialize Wi-Fi controller");
     let _wifi_interface = esp_radio::wifi::Interface::station();
+    
+    
+    // VJR SETUP
+
+    // Display setup
+    let pinout     = display_pinout_new!(peripherals);
+    let buffer_a   = display_buffer_init!(DISPLAY_BUFFER_A);
+    let buffer_b   = display_buffer_init!(DISPLAY_BUFFER_B);
+    let cmd_buffer = display_cmd_buffer_init!(DISPLAY_CMD_BUFFER);
+    
+    let display = Display::new(pinout, buffer_a, buffer_b, cmd_buffer);
+
+    
+    // All right, time for a proper BIOS
+    // Split into two sections: ROM Listener and Home Menu.
+
+    // For Home Menu, we will need a Scene for graphics
+    
+    let mut home_scene = Scene::new();
+
+    let triangle = Triangle::new_equilateral(Coord2D::new(160, 120), 10)
+        .with_outline(Display::rgb(135, 20, 45)
+        .with_fill(Display::rgb(30, 100, 200);
+    
+    home_scene.add(&mut triangle);
+    
+    loop {
+        loop { // Home menu
+        
+            
+
+            home_scene.draw();
+        }
+        
+        loop { // Background BIOS
+            
+        }
+    
+        // Home button pressed signal received, returning to start of loop.
+    }
+
+    
 
     // TODO: Spawn some tasks
     let _ = spawner;

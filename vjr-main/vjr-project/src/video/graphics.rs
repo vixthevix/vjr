@@ -11,34 +11,54 @@ Image sprite as well.
 */
 use embedded_graphics_core::{
     pixelcolor::{
-        // RgbColor, // Trait
+        RgbColor, // Trait
         Rgb565 as RGB // We are only really dealing with rgb565
     },
-    draw_target::DrawTarget, // Trait
+    // draw_target::DrawTarget, // Trait
 };
 
 use heapless::Vec;
+
+
+use crate::video::base::*;
 
 /*
 Base trait for all sprites that can be drawn to the screen.
 */
 pub trait Sprite {
-    fn draw(&self);
+    fn can_draw(&self, top_left: Coord2D, bottom_right: Coord2D);
+    fn draw(&self, buffer: &'static mut [u8; DISPLAY_BUFFER_SIZE]);
 }
 
 
-const SCENE_SPRITE_MAX: u16 = 64;
+/*
+Struct for holding video row buffers and displaying scenes.
+*/
+pub struct Renderer {
+    buffer_a: [u8; DISPLAY_BUFFER_SIZE],
+    buffer_b: [u8; DISPLAY_BUFFER_SIZE],
+}
+
+impl Renderer {
+    pub fn new() {}
+
+    pub fn draw_scene(&mut self, scene: &mut Scene) {}
+}
 
 /*
 Struct for looping through Sprites and drawing them.
 */
+const SCENE_SPRITE_MAX: u16 = 64;
 pub struct Scene {
-    sprites: Vec<*mut dyn Sprite, SCENE_SPRITE_MAX>;
+    sprites: Vec<*mut dyn Sprite, { SCENE_SPRITE_MAX as usize }>
 }
 
 impl Scene {
-    pub fn new() -> Self {
+    pub fn new(buffer_a: [u8; DISPLAY_BUFFER_SIZE], buffer_b: [u8; DISPLAY_BUFFER_SIZE] ) -> Self {
         Self {
+            buffer_a,
+            buffer_b,
+            buffer_swap: true,
             sprites: Vec::new(),
         }
     }
@@ -46,14 +66,14 @@ impl Scene {
     /*
     Adds a Sprite to the Scene, and returns a handle (index) to that Sprite.
     */
-    pub fn add(&mut self, sprite: &mut dyn Sprite) -> u16 {
-        self.sprites.push(sprite as *mut dyn Sprite);
+    pub fn add(&mut self, sprite: &'static mut dyn Sprite) -> usize {
+        let _ = self.sprites.push(sprite as *mut dyn Sprite);
         
-        (self.sprites.len() - 1) as u16
+        self.sprites.len() - 1
     }
     
-    pub fn add_at(&mut self, sprite: &mut dyn Sprite, index: u16) -> u16 {
-        self.sprites.insert(index, sprite as *mut dyn Sprite);
+    pub fn add_at(&mut self, sprite: &'static mut dyn Sprite, index: usize) -> usize {
+        let _ = self.sprites.insert(index, sprite as *mut dyn Sprite);
 
         index
     }
@@ -64,50 +84,51 @@ impl Scene {
         (self.sprites.len() - 1) as u16
     }
     
-    pub fn pop_at(&mut self, index: u16) -> u16 {
-        self.sprites.remove(index.into());
+    pub fn pop_at(&mut self, index: usize) -> usize {
+        self.sprites.remove(index);
 
         index
     }
     
     // Swap two Sprites around in a scene, changing drawing order.
-    pub fn swap(&mut self, a: u16, b: u16) -> (u16, u16) {
+    pub fn swap(&mut self, a: usize, b: usize) -> (usize, usize) {
         let temp = self.sprites[a];
-        let self.sprites[a] = self.sprites[b];
+        self.sprites[a] = self.sprites[b];
         self.sprites[b] = temp;
 
         (b, a)
     }
 
-    pub fn shift_down(&mut self, index: u16, count: u16) -> u16 {
+    pub fn shift_down(&mut self, index: usize, count: usize) -> usize {
         
         let mut new_index = index;
 
-        for let i in 0..count {
+        for _ in 0..count {
             (new_index, _) = self.swap(new_index, new_index - 1);
         }
 
         new_index
     }
     
-    pub fn shift_up(&mut self, index: u16, count: u16) -> u16 {
+    pub fn shift_up(&mut self, index: usize, count: usize) -> usize {
         
         let mut new_index = index;
 
-        for let i in 0..count {
+        for _ in 0..count {
             (new_index, _) = self.swap(new_index, new_index + 1);
         }
 
         new_index
     }
 
-    pub fn sprite_count(&self) -> u16 {
-        self.sprites.len() as u16
+    pub fn sprite_count(&self) -> usize {
+        self.sprites.len() as usize
     }
     
     // UNSAFE FUNCTION
     // Dereferences pointer to draw to screen.
-    pub fn draw(&self) {
+    pub fn draw(&self, display: &mut Display) {
+        
         for &sprite in &self.sprites {
             unsafe {
                 (*sprite).draw();
@@ -122,7 +143,13 @@ impl Scene {
 pub struct Coord2D {
     pub x: isize,
     pub y: isize,
-} 
+}
+
+impl Coord2D {
+    pub fn new(x: isize, y: isize) -> Self {
+        Self { x, y }
+    }
+}
 
 /*
 3D Coordinate struct
@@ -132,6 +159,12 @@ pub struct Coord3D {
     pub y: isize,
     pub z: isize,
 } 
+
+impl Coord3D {
+    pub fn new(x: isize, y: isize, z: isize) -> Self {
+        Self { x, y, z }
+    }
+}
 
 
 /*
@@ -240,7 +273,7 @@ impl Image {
         
         // Find 'VIMG' guard
         let guard = &data[0..4];
-        if ! guard == b"VIMG" {
+        if !(guard == b"VIMG") {
             panic!("Invalid VIMG, starting guard not present");
         }
 
