@@ -16,6 +16,16 @@ use log::info;
 
 use esp_hal::gpio::Output;
 
+use esp_hal::dma_buffers;
+
+use embedded_graphics_core::{
+    pixelcolor::{
+        RgbColor, // Trait
+        Rgb565 as RGB // We are only really dealing with rgb565
+    },
+    draw_target::DrawTarget, // Trait
+};
+
 use embassy_sync::{
     channel::{
         Channel,
@@ -30,7 +40,14 @@ use embassy_futures::*;
 use static_cell::StaticCell;
 
 
-use crate::video::*;
+use crate::video::{
+    display::*,
+    sprite::*,
+    renderer::*,
+    pusher::*,
+    scene::*,
+};
+
 pub mod video;
 
 
@@ -127,15 +144,27 @@ async fn screen_task(mut display: Display<'static>) -> ! {
 }
 
 // Specific video buffer pusher for Home menu
-struct HomePusher {
-    display: &mut Display,
+struct HomePusher<'a> {
+    display: *mut Display<'a>,
 }
 
-impl Pusher for HomePusher {
-    fn push(&mut self, buffer: &[u8; DISPLAY_BUFFER_SIZE], y_offset: u16) {
+impl<'a> Pusher for HomePusher<'a> {
+    fn push(&mut self, buffer: &[u8], y_offset: u16) {
         // Use SPI DMA to bush buffer to display.
+        unsafe {
+            let display = self.display;
+            (*display).write_buffer(buffer, y_offset);
+        }
     }
 } 
+
+impl<'a> HomePusher<'a> {
+    pub fn new(display: &mut Display<'a>) -> Self {
+        Self {
+            display: display as *mut Display
+        }
+    }
+}
 
 
 // Memory Pin for async task communication channel.
@@ -177,12 +206,11 @@ async fn main(spawner: Spawner) {
     // VJR SETUP
 
     // Display setup
-    let pinout     = display_pinout_new!(peripherals);
-    let buffer_a   = display_buffer_init!(DISPLAY_BUFFER_A);
-    let buffer_b   = display_buffer_init!(DISPLAY_BUFFER_B);
-    let cmd_buffer = display_cmd_buffer_init!(DISPLAY_CMD_BUFFER);
-    
-    let display = Display::new(pinout, buffer_a, buffer_b, cmd_buffer);
+    let pinout      = display_pinout_new!(peripherals);
+    let cmd_buffer  = display_cmd_buffer_init!(DISPLAY_CMD_BUFFER);
+    let dma_channel = peripherals.DMA_SPI2;
+
+    let mut display = Display::new(pinout, dma_channel, cmd_buffer);
 
     
     // All right, time for a proper BIOS
@@ -190,25 +218,23 @@ async fn main(spawner: Spawner) {
     
     // For Home Menu, we will need a Scene for graphics
     
-    let pusher = HomePusher {
-        &mut display,
-    };
+    let pusher = HomePusher::new(&mut display);
 
-    let renderer = Renderer::new(pusher);
+    let mut renderer = Renderer::new(pusher);
 
     let mut home_scene = Scene::new(RGB::WHITE);
 
     let triangle = Triangle::new_equilateral(Coord2D::new(160, 120), 10)
-        .with_outline(Display::rgb(135, 20, 45)
-        .with_fill(Display::rgb(30, 100, 200);
+        .with_outline(Display::rgb(135, 20, 45))
+        .with_fill(Display::rgb(30, 100, 200));
     
-    home_scene.add(&mut triangle);
+    // home_scene.add(&mut triangle);
     
     loop {
         loop { // Home menu
         
             
-            renderer.draw_scene(&mut home_screen);
+            renderer.draw_scene(&mut home_scene);
         }
         
         loop { // Background BIOS

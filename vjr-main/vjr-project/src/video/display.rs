@@ -20,10 +20,16 @@ use embedded_hal_bus::spi::{
 use esp_hal::{
     delay::Delay,
     time::Rate,
+    dma::{
+        DmaChannel,
+    },
     spi::{
         master::{
             Config as SpiConfig,
             Spi,
+            SpiDma,
+            SpiMasterDmaChannel,
+            AnySpi
         },
         Mode as SpiMode,
     },
@@ -85,9 +91,9 @@ pub const DISPLAY_CMD_BUFFER_SIZE: usize = 16;
 
 
 // Type aliases for clear code
-pub type DisplaySpiBus<'a> = Spi<'a, esp_hal::Blocking>;
+pub type DisplaySpiBus<'a> = SpiDma<'a, esp_hal::Blocking>;
 pub type DisplayCsPin <'a> = Output<'a>; 
-pub type DisplaySpiDev<'a>     = ExclusiveDevice<DisplaySpiBus<'a>, DisplayCsPin<'a>, NoDelay>;
+pub type DisplaySpiDev<'a> = ExclusiveDevice<DisplaySpiBus<'a>, DisplayCsPin<'a>, NoDelay>;
 pub type DisplayDcPin <'a> = Output<'a>;
 pub type DisplayRstPin<'a> = Output<'a>;
 
@@ -103,9 +109,10 @@ pub struct Display<'a> {
 }
 
 impl<'a> Display<'a> {
-    pub fn new(
-        pinout: PinOut<'a>, 
-        cmd_buffer: &'static mut [u8; DISPLAY_CMD_BUFFER_SIZE]
+    pub fn new<C: DmaChannel + SpiMasterDmaChannel<'a, AnySpi<'a>>>(
+        pinout     : PinOut<'a>,
+        dma_channel: C,
+        cmd_buffer : &'static mut [u8; DISPLAY_CMD_BUFFER_SIZE]
     ) -> Self {
         
         // SPI specific pins
@@ -117,7 +124,8 @@ impl<'a> Display<'a> {
         )
         .unwrap()
         .with_sck(pinout.sck)
-        .with_mosi(pinout.mosi);
+        .with_mosi(pinout.mosi)
+        .with_dma(dma_channel);
 
         // Display specific pins
         let cs  = Output::new(pinout.cs , Level::Low, OutputConfig::default());
@@ -155,8 +163,19 @@ impl<'a> Display<'a> {
         self.interface.clear(colour).unwrap();
     }
 
+    pub fn write_buffer(&mut self, buffer: &[u8], y_offset: u16) {
+        // Define drawing region
+        let x1 = 0;
+        let y1 = y_offset;
+        let x2 = 319;          // 320 px display width (HARDCODED, CHANGE LATER)
+        let y2 = y_offset + 15; // 16  px buffer height (HARDCODED, CHANGE LATER)
     
+        self.interface.set_address_window(x1, y1, x2, y2).unwrap();
 
+        // Send bytes directly though SPI bus
+        let spi_bus = self.interface.bus_mut();
+        spi_bus.write_bytes(buffer).unwrap();
+    }
 }
 
 /*

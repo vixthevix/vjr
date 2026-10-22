@@ -1,253 +1,175 @@
     Checking vjr-project v0.1.0 (/home/vixthevix/Documents/code/personal/vjr/vjr-main/vjr-project)
-warning: unused imports: `Level` and `OutputConfig`
-  --> src/main.rs:31:5
+warning: unused import: `esp_hal::dma_buffers`
+  --> src/main.rs:19:5
    |
-31 |     Level,
-   |     ^^^^^
-32 |     Output,
-33 |     OutputConfig,
-   |     ^^^^^^^^^^^^
+19 | use esp_hal::dma_buffers;
+   |     ^^^^^^^^^^^^^^^^^^^^
    |
    = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
 
-warning: unused import: `embedded_hal_bus::spi::ExclusiveDevice`
-  --> src/main.rs:36:5
+warning: unused import: `draw_target::DrawTarget`
+  --> src/main.rs:26:5
    |
-36 | use embedded_hal_bus::spi::ExclusiveDevice;
-   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-warning: unused imports: `Config as SpiConfig`, `Mode as SpiMode`, `Spi`, `delay::Delay`, and `time::Rate`
-  --> src/main.rs:39:5
-   |
-39 |     delay::Delay,
-   |     ^^^^^^^^^^^^
-40 |     time::Rate,
-   |     ^^^^^^^^^^
-...
-43 |             Config as SpiConfig,
-   |             ^^^^^^^^^^^^^^^^^^^
-44 |             Spi,
-   |             ^^^
-45 |         },
-46 |         Mode as SpiMode,
-   |         ^^^^^^^^^^^^^^^
-
-warning: unused imports: `Builder`, `ColorInversion`, `ColorOrder`, `interface::SpiInterface`, and `models::ILI9341Rgb565`
-  --> src/main.rs:51:5
-   |
-51 |     interface::SpiInterface,
-   |     ^^^^^^^^^^^^^^^^^^^^^^^
-52 |     options::{
-53 |         ColorInversion, // Corrects colour
-   |         ^^^^^^^^^^^^^^
-54 |         ColorOrder,     // RGB <-> BGR
-   |         ^^^^^^^^^^
-55 |     }, 
-56 |     Builder,
-   |     ^^^^^^^
-57 |     models::ILI9341Rgb565 // Fairly sure this is the right one
-   |     ^^^^^^^^^^^^^^^^^^^^^
-
-warning: unused imports: `Rgb565 as RGB` and `draw_target::DrawTarget`
-  --> src/main.rs:63:9
-   |
-63 |         Rgb565 as RGB // We are only really dealing with rgb565
-   |         ^^^^^^^^^^^^^
-64 |     },
-65 |     draw_target::DrawTarget, // Trait
+26 |     draw_target::DrawTarget, // Trait
    |     ^^^^^^^^^^^^^^^^^^^^^^^
 
-warning: unused import: `embassy_executor::Spawner`
- --> src/video/base.rs:7:5
+warning: unused import: `crate::video::renderer::DISPLAY_BUFFER_SIZE`
+ --> src/video/pusher.rs:4:5
   |
-7 | use embassy_executor::Spawner;
-  |     ^^^^^^^^^^^^^^^^^^^^^^^^^
+4 | use crate::video::renderer::DISPLAY_BUFFER_SIZE;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-warning: unused imports: `Duration` and `Timer`
- --> src/video/base.rs:8:20
+warning: unused import: `RgbColor`
+ --> src/video/renderer.rs:5:9
   |
-8 | use embassy_time::{Duration, Timer};
-  |                    ^^^^^^^^  ^^^^^
+5 |         RgbColor, // Trait
+  |         ^^^^^^^^
 
-warning: unused import: `esp_hal::clock::CpuClock`
-  --> src/video/base.rs:10:5
+warning: unused import: `RgbColor`
+ --> src/video/scene.rs:4:9
+  |
+4 |         RgbColor, // Trait
+  |         ^^^^^^^^
+
+warning: unused import: `crate::video::display::*`
+  --> src/video/sprite.rs:19:5
    |
-10 | use esp_hal::clock::CpuClock;
+19 | use crate::video::display::*;
    |     ^^^^^^^^^^^^^^^^^^^^^^^^
 
-warning: unused import: `esp_hal::timer::timg::TimerGroup`
-  --> src/video/base.rs:11:5
-   |
-11 | use esp_hal::timer::timg::TimerGroup;
-   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+warning: unreachable expression
+   --> src/main.rs:240:9
+    |
+234 | /         loop { // Home menu
+235 | |         
+236 | |             
+237 | |             renderer.draw_scene(&mut home_scene);
+238 | |         }
+    | |_________- any code following this expression is unreachable
+239 |           
+240 | /         loop { // Background BIOS
+241 | |             
+242 | |         }
+    | |_________^ unreachable expression
+    |
+    = note: `#[warn(unreachable_code)]` (part of `#[warn(unused)]`) on by default
 
-warning: unused import: `log::info`
-  --> src/video/base.rs:12:5
-   |
-12 | use log::info;
-   |     ^^^^^^^^^
+warning: unused variable: `spawner`
+   --> src/main.rs:183:15
+    |
+183 | async fn main(spawner: Spawner) {
+    |               ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_spawner`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
 
-warning: unused imports: `Channel`, `Receiver`, `Sender`, and `blocking_mutex::raw::NoopRawMutex`
-  --> src/video/base.rs:16:9
-   |
-16 |         Channel,
-   |         ^^^^^^^
-17 |         Receiver,
-   |         ^^^^^^^^
-18 |         Sender
-   |         ^^^^^^
-19 |     },
-20 |     blocking_mutex::raw::NoopRawMutex
-   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+warning: unused variable: `triangle`
+   --> src/main.rs:227:9
+    |
+227 |     let triangle = Triangle::new_equilateral(Coord2D::new(160, 120), 10)
+    |         ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_triangle`
 
-warning: unused import: `embassy_futures::*`
-  --> src/video/base.rs:23:5
-   |
-23 | use embassy_futures::*;
-   |     ^^^^^^^^^^^^^^^^^^
+error[E0624]: method `set_address_window` is private
+   --> src/video/display.rs:173:24
+    |
+173 |         self.interface.set_address_window(x1, y1, x2, y2).unwrap();
+    |                        ^^^^^^^^^^^^^^^^^^ private method
+    |
+   ::: /home/vixthevix/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/mipidsi-0.10.0/src/lib.rs:301:5
+    |
+301 |     fn set_address_window(&mut self, sx: u16, sy: u16, ex: u16, ey: u16) -> Result<(), DI::Error> {
+    |     --------------------------------------------------------------------------------------------- private method defined here
 
-warning: unused import: `static_cell::StaticCell`
-  --> src/video/base.rs:25:5
-   |
-25 | use static_cell::StaticCell;
-   |     ^^^^^^^^^^^^^^^^^^^^^^^
-
-error[E0277]: the trait bound `Rgb565: Model` is not satisfied
-   --> src/video/base.rs:137:16
+error[E0599]: no method named `bus_mut` found for struct `mipidsi::Display<DI, MODEL, RST>` in the current scope
+   --> src/video/display.rs:176:38
     |
-137 |     interface: DisplayScreen<'a>, // The thing made by Builder::new()
-    |                ^^^^^^^^^^^^^^^^^ the trait `Model` is not implemented for `Rgb565`
+176 |         let spi_bus = self.interface.bus_mut();
+    |                                      ^^^^^^^ method not found in `Display<SpiInterface<'a, ..., ...>, ..., ...>`
     |
-    = help: the following other types implement trait `Model`:
-              GC9107
-              GC9A01
-              ILI9225Rgb565
-              ILI9341Rgb565
-              ILI9341Rgb666
-              ILI9342CRgb565
-              ILI9342CRgb666
-              ILI9486Rgb565
-            and 7 others
-note: required by a bound in `mipidsi::Display`
-   --> /home/vixthevix/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/mipidsi-0.10.0/src/lib.rs:144:12
-    |
-141 | pub struct Display<DI, MODEL, RST>
-    |            ------- required by a bound in this struct
-...
-144 |     MODEL: Model,
-    |            ^^^^^ required by this bound in `Display`
-
-error[E0277]: the trait bound `esp_hal::peripherals::SPI2<'a>: DriverMode` is not satisfied
-   --> src/video/base.rs:137:16
-    |
-137 |     interface: DisplayScreen<'a>, // The thing made by Builder::new()
-    |                ^^^^^^^^^^^^^^^^^ the trait `DriverMode` is not implemented for `esp_hal::peripherals::SPI2<'a>`
-    |
-help: the following other types implement trait `DriverMode`
-   --> /home/vixthevix/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/esp-hal-1.2.2/src/lib.rs:562:1
-    |
-562 | impl crate::DriverMode for Blocking {}
-    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `Blocking`
-563 | impl crate::DriverMode for Async {}
-    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `Async`
-note: required by a bound in `esp_hal::spi::master::Spi`
-   --> /home/vixthevix/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/esp-hal-1.2.2/src/spi/master/mod.rs:697:24
-    |
-697 | pub struct Spi<'d, Dm: DriverMode> {
-    |                        ^^^^^^^^^^ required by this bound in `Spi`
-
-error[E0308]: mismatched types
-   --> src/video/base.rs:178:13
-    |
-178 |             interface
-    |             ^^^^^^^^^ expected `esp_hal::peripherals::SPI2<'_>`, found `Blocking`
-    |
-    = note: expected struct `Display<SpiInterface<'_, ..., ...>, ..., ...>`
-               found struct `mipidsi::Display<SpiInterface<'_, ExclusiveDevice<esp_hal::spi::master::Spi<'_, Blocking>, Output<'_>, _>, Output<'_>>, ILI9341Rgb565, Output<'_>>`
-    = note: the full name for the type has been written to '/home/vixthevix/Documents/code/personal/vjr/vjr-main/vjr-project/target/xtensa-esp32-none-elf/debug/deps/vjr_project-b9faa68b3e09aa06.long-type-9059615580020458920.txt'
+    = note: the full name for the type has been written to '/home/vixthevix/Documents/code/personal/vjr/vjr-main/vjr-project/target/xtensa-esp32-none-elf/debug/deps/vjr_project-49a066bb6cd4a7ff.long-type-9597648421797034304.txt'
     = note: consider using `--verbose` to print the full type name to the console
 
-error[E0277]: the trait bound `Rgb565: Model` is not satisfied
-   --> src/video/base.rs:178:13
-    |
-178 |             interface
-    |             ^^^^^^^^^ the trait `Model` is not implemented for `Rgb565`
-    |
-    = help: the following other types implement trait `Model`:
-              GC9107
-              GC9A01
-              ILI9225Rgb565
-              ILI9341Rgb565
-              ILI9341Rgb666
-              ILI9342CRgb565
-              ILI9342CRgb666
-              ILI9486Rgb565
-            and 7 others
-note: required by a bound in `mipidsi::Display`
-   --> /home/vixthevix/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/mipidsi-0.10.0/src/lib.rs:144:12
-    |
-141 | pub struct Display<DI, MODEL, RST>
-    |            ------- required by a bound in this struct
+warning: variable does not need to be mutable
+  --> src/video/renderer.rs:56:17
+   |
+56 |             let mut cur_buffer = if buffer_swap { &mut *buffer_a } else { &mut *buffer_b };
+   |                 ----^^^^^^^^^^
+   |                 |
+   |                 help: remove this `mut`
+   |
+   = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+error[E0499]: cannot borrow `*buffer_a` as mutable more than once at a time
+  --> src/video/renderer.rs:56:51
+   |
+56 |             let mut cur_buffer = if buffer_swap { &mut *buffer_a } else { &mut *buffer_b };
+   |                                                   ^^^^^^^^^^^^^^ `*buffer_a` was mutably borrowed here in the previous iteration of the loop
 ...
-144 |     MODEL: Model,
-    |            ^^^^^ required by this bound in `Display`
+64 |                     (*sprite).draw(cur_buffer, cur_y);
+   |                     --------------------------------- argument requires that `*buffer_a` is borrowed for `'static`
 
-error[E0277]: the trait bound `esp_hal::peripherals::SPI2<'_>: DriverMode` is not satisfied
-   --> src/video/base.rs:178:13
-    |
-178 |             interface
-    |             ^^^^^^^^^ the trait `DriverMode` is not implemented for `esp_hal::peripherals::SPI2<'_>`
-    |
-help: the following other types implement trait `DriverMode`
-   --> /home/vixthevix/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/esp-hal-1.2.2/src/lib.rs:562:1
-    |
-562 | impl crate::DriverMode for Blocking {}
-    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `Blocking`
-563 | impl crate::DriverMode for Async {}
-    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `Async`
-note: required by a bound in `esp_hal::spi::master::Spi`
-   --> /home/vixthevix/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/esp-hal-1.2.2/src/spi/master/mod.rs:697:24
-    |
-697 | pub struct Spi<'d, Dm: DriverMode> {
-    |                        ^^^^^^^^^^ required by this bound in `Spi`
+error[E0499]: cannot borrow `*buffer_b` as mutable more than once at a time
+  --> src/video/renderer.rs:56:75
+   |
+56 |             let mut cur_buffer = if buffer_swap { &mut *buffer_a } else { &mut *buffer_b };
+   |                                                                           ^^^^^^^^^^^^^^ `*buffer_b` was mutably borrowed here in the previous iteration of the loop
+...
+64 |                     (*sprite).draw(cur_buffer, cur_y);
+   |                     --------------------------------- argument requires that `*buffer_b` is borrowed for `'static`
 
-error[E0599]: the method `clear` exists for struct `Display<SpiInterface<'a, ..., ...>, ..., ...>`, but its trait bounds were not satisfied
-   --> src/video/base.rs:210:24
-    |
-210 |         self.interface.clear(colour).unwrap();
-    |                        ^^^^^ method cannot be called on `Display<SpiInterface<'a, ..., ...>, ..., ...>` due to unsatisfied trait bounds
-    |
-   ::: /home/vixthevix/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/embedded-hal-bus-0.3.0/src/spi/exclusive.rs:19:1
-    |
- 19 | pub struct ExclusiveDevice<BUS, CS, D> {
-    | -------------------------------------- doesn't satisfy `_: SpiDevice`
-    |
-   ::: /home/vixthevix/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/mipidsi-0.10.0/src/lib.rs:141:1
-    |
-141 | pub struct Display<DI, MODEL, RST>
-    | ---------------------------------- doesn't satisfy `_: DrawTarget`
-    |
-   ::: /home/vixthevix/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/mipidsi-0.10.0/src/interface/spi.rs:23:1
-    |
- 23 | pub struct SpiInterface<'a, SPI, DC> {
-    | ------------------------------------ doesn't satisfy `_: Interface`
-    |
-   ::: /home/vixthevix/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/embedded-graphics-core-0.4.1/src/pixelcolor/rgb_color.rs:72:9
-    |
- 72 |         pub struct $type($storage_type);
-    |         -------------------------------- doesn't satisfy `Rgb565: Model`
-    |
-    = note: the following trait bounds were not satisfied:
-            `SpiInterface<'a, ExclusiveDevice<esp_hal::spi::master::Spi<'a, esp_hal::peripherals::SPI2<'a>>, Output<'a>, NoDelay>, Output<'a>>: mipidsi::interface::Interface`
-            which is required by `mipidsi::Display<SpiInterface<'a, ExclusiveDevice<esp_hal::spi::master::Spi<'a, esp_hal::peripherals::SPI2<'a>>, Output<'a>, NoDelay>, Output<'a>>, Rgb565, Output<'a>>: DrawTarget`
-            `Rgb565: Model`
-            which is required by `mipidsi::Display<SpiInterface<'a, ExclusiveDevice<esp_hal::spi::master::Spi<'a, esp_hal::peripherals::SPI2<'a>>, Output<'a>, NoDelay>, Output<'a>>, Rgb565, Output<'a>>: DrawTarget`
-            `ExclusiveDevice<esp_hal::spi::master::Spi<'a, esp_hal::peripherals::SPI2<'a>>, Output<'a>, NoDelay>: embedded_hal::spi::SpiDevice`
-            which is required by `mipidsi::Display<SpiInterface<'a, ExclusiveDevice<esp_hal::spi::master::Spi<'a, esp_hal::peripherals::SPI2<'a>>, Output<'a>, NoDelay>, Output<'a>>, Rgb565, Output<'a>>: DrawTarget`
-    = note: the full name for the type has been written to '/home/vixthevix/Documents/code/personal/vjr/vjr-main/vjr-project/target/xtensa-esp32-none-elf/debug/deps/vjr_project-b9faa68b3e09aa06.long-type-3095188268325145269.txt'
-    = note: consider using `--verbose` to print the full type name to the console
+error[E0521]: borrowed data escapes outside of method
+  --> src/video/renderer.rs:64:21
+   |
+48 |     pub fn draw_scene(&mut self, scene: &mut Scene) {
+   |                       ---------
+   |                       |
+   |                       `self` is a reference that is only valid in the method body
+   |                       let's call the lifetime of this reference `'1`
+...
+64 |                     (*sprite).draw(cur_buffer, cur_y);
+   |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |                     |
+   |                     `self` escapes the method body here
+   |                     argument requires that `'1` must outlive `'static`
 
-Some errors have detailed explanations: E0277, E0308, E0599.
-For more information about an error, try `rustc --explain E0277`.
-warning: `vjr-project` (bin "vjr-project") generated 13 warnings
-error: could not compile `vjr-project` (bin "vjr-project") due to 6 previous errors; 13 warnings emitted
+error[E0499]: cannot borrow `*cur_buffer` as mutable more than once at a time
+  --> src/video/renderer.rs:64:36
+   |
+64 |                     (*sprite).draw(cur_buffer, cur_y);
+   |                     ---------------^^^^^^^^^^--------
+   |                     |              |
+   |                     |              `*cur_buffer` was mutably borrowed here in the previous iteration of the loop
+   |                     argument requires that `*cur_buffer` is borrowed for `'static`
+
+error[E0502]: cannot borrow `*cur_buffer` as immutable because it is also borrowed as mutable
+  --> src/video/renderer.rs:68:25
+   |
+64 |                     (*sprite).draw(cur_buffer, cur_y);
+   |                     ---------------------------------
+   |                     |              |
+   |                     |              mutable borrow occurs here
+   |                     argument requires that `*cur_buffer` is borrowed for `'static`
+...
+68 |             pusher.push(cur_buffer, cur_y);
+   |                         ^^^^^^^^^^ immutable borrow occurs here
+
+warning: variable `meta_length` is assigned to, but never used
+   --> src/video/sprite.rs:184:13
+    |
+184 |         let mut meta_length: usize = 0;
+    |             ^^^^^^^^^^^^^^^
+    |
+    = note: consider using `_meta_length` instead
+
+warning: value assigned to `meta_length` is never read
+   --> src/video/sprite.rs:190:13
+    |
+190 |             meta_length += 1;
+    |             ^^^^^^^^^^^^^^^^
+    |
+    = help: maybe it is overwritten before being read?
+    = note: `#[warn(unused_assignments)]` (part of `#[warn(unused)]`) on by default
+
+Some errors have detailed explanations: E0499, E0502, E0521, E0599, E0624.
+For more information about an error, try `rustc --explain E0499`.
+warning: `vjr-project` (bin "vjr-project") generated 12 warnings
+error: could not compile `vjr-project` (bin "vjr-project") due to 7 previous errors; 12 warnings emitted

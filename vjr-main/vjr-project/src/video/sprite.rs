@@ -16,14 +16,15 @@ use embedded_graphics_core::{
     },
 };
 
-use crate::video::base::*;
+use crate::video::display::*;
+use crate::video::renderer::DISPLAY_BUFFER_SIZE;
 
 /*
 Base trait for all sprites that can be drawn to the screen.
 */
 pub trait Sprite {
     fn can_draw(&self, top_left: Coord2D, bottom_right: Coord2D);
-    fn draw(&self, buffer: &'static mut [u8; DISPLAY_BUFFER_SIZE]);
+    fn draw(&self, buffer: & mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16);
 }
 
 
@@ -62,7 +63,7 @@ impl Coord3D {
 /*
 Triangle shape.
 */
-struct Triangle {
+pub struct Triangle {
     p1: Coord2D,
     p2: Coord2D,
     p3: Coord2D,
@@ -147,7 +148,7 @@ Image sprite.
 Supports VIMG only for now.
 */
 
-struct Image {
+pub struct Image {
     pub pos: Coord2D,
     pub width:  u16,
     pub height: u16,
