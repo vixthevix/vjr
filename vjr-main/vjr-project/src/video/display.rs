@@ -12,10 +12,13 @@ use esp_hal::gpio::{
     OutputConfig,
 };
 
+use embedded_hal::spi::SpiDevice;
+
 use embedded_hal_bus::spi::{
     ExclusiveDevice,
     NoDelay,
 };
+
 
 use esp_hal::{
     delay::Delay,
@@ -103,9 +106,12 @@ pub type DisplayScreen <'a>= mipidsi::Display<DisplayInterface<'a>, ILI9341Rgb56
 
 /*
 General struct for the display.
+For maximum control, we will implement commands ourselves.
 */
 pub struct Display<'a> {
-    interface: DisplayScreen<'a>, // The thing made by Builder::new()
+    interface: DisplaySpiDev<'a>, // The target for writing our SPI data to.
+    data_mode: DisplayDcPin<'a>,  // Switching between Data and Command mode.
+
 }
 
 impl<'a> Display<'a> {
@@ -115,6 +121,8 @@ impl<'a> Display<'a> {
         cmd_buffer : &'static mut [u8; DISPLAY_CMD_BUFFER_SIZE]
     ) -> Self {
         
+        // Initialise the screen with mipidsi, then hand control over back to us.
+
         // SPI specific pins
         let spi = Spi::new(
             pinout.spi2,
@@ -129,22 +137,24 @@ impl<'a> Display<'a> {
 
         // Display specific pins
         let cs  = Output::new(pinout.cs , Level::Low, OutputConfig::default());
-        let dc  = Output::new(pinout.dc , Level::Low, OutputConfig::default());
         let res = Output::new(pinout.res, Level::Low, OutputConfig::default());
         
+        let mut dc  = Output::new(pinout.dc , Level::Low, OutputConfig::default());
+        
         // Linking into display interface
-        let spi_dev   = ExclusiveDevice::new_no_delay(spi, cs).unwrap();
-        let interface = SpiInterface::new(spi_dev, dc, cmd_buffer); 
+        let mut spi_dev   = ExclusiveDevice::new_no_delay(spi, cs).unwrap();
+        let mut interface = SpiInterface::new(&mut spi_dev, &mut dc, cmd_buffer); 
         
         let mut delay = Delay::new();
-        let interface = Builder::new(ILI9341Rgb565, interface)
+        let interface = Builder::new(ILI9341Rgb565, &mut interface)
             .reset_pin(res)
             .invert_colors(ColorInversion::Inverted) 
             .color_order(ColorOrder::Bgr)
             .init(&mut delay).unwrap();
 
         Display {
-            interface
+            interface: spi_dev,
+            data_mode: dc
         }
     }
     
@@ -159,22 +169,48 @@ impl<'a> Display<'a> {
         )
     }
     
-    pub fn fill(&mut self, colour: RGB) {
-        self.interface.clear(colour).unwrap();
+    fn execute(&mut self, command: u8, arguments: &[u8]) {
+        // For command mode => dc = 0
+        // For raw mode     => dc = 1
+
+        self.data_mode.set_low();
+        self.interface.write(&[command]).unwrap();
+
+        self.data_mode.set_high();
+        self.interface.write(arguments).unwrap();
+
+        self.data_mode.set_low(); // For safety
     }
 
     pub fn write_buffer(&mut self, buffer: &[u8], y_offset: u16) {
         // Define drawing region
-        let x1 = 0;
-        let y1 = y_offset;
-        let x2 = 319;          // 320 px display width (HARDCODED, CHANGE LATER)
-        let y2 = y_offset + 15; // 16  px buffer height (HARDCODED, CHANGE LATER)
-    
-        self.interface.set_address_window(x1, y1, x2, y2).unwrap();
+        let x1: u16 = 0;
+        let y1: u16 = y_offset;
+        let x2: u16 = 319;          // 320 px display width (HARDCODED, CHANGE LATER)
+        let y2: u16 = y_offset + 15; // 16  px buffer height (HARDCODED, CHANGE LATER)
+        
 
-        // Send bytes directly though SPI bus
-        let spi_bus = self.interface.bus_mut();
-        spi_bus.write_bytes(buffer).unwrap();
+        // To fill the screen, we have to set the column and row addresses.
+        // Command 0x2a => Column Address Set
+        // Command 0x2b => Page (Row) Address Set
+        // Command 0x2c => Memory Write
+        
+        // Additionally, we need to split our coordinates into u16 values,
+        // Due to arguments being u8 for raw data.
+        
+        let x1 = x1.to_be_bytes();
+        let y1 = y1.to_be_bytes();
+        let x2 = x2.to_be_bytes();
+        let y2 = y2.to_be_bytes();
+        
+        // Column set
+        self.execute(0x2a, &[x1[0], x1[1], x2[0], x2[1]]);
+
+        // Row set
+        self.execute(0x2b, &[y1[0], y1[1], y2[0], y2[1]]);
+
+        // Memory write
+        self.execute(0x2c, buffer);
     }
 }
 

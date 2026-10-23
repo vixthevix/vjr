@@ -52,7 +52,7 @@ impl<P: Pusher> Renderer<P> {
         // Deconstruct self
         let Self { buffer_a, buffer_b, pusher } = self;
 
-        for chunk in 0..15 {
+        for chunk in 0..20 {
             let mut cur_buffer = if buffer_swap { *buffer_a } else { *buffer_b };
             let cur_y = (chunk * chunk_height) as u16;
             
@@ -77,7 +77,21 @@ impl<P: Pusher> Renderer<P> {
         let u16_container = RawU16::from(bg_colour);
         let colour = u16_container.into_inner();
         
-        let colour_bytes = colour.to_ne_bytes();
+        // UNSAFE
+        // Rust slices have the 'fill' method, which does what you think it does.
+        // However, colour is a u16, not a u8, so we have to perform type casting here.
+
+        let u16_buffer = unsafe {
+            core::slice::from_raw_parts_mut(     // Take a subslice with pointer and stride
+                buffer.as_mut_ptr() as *mut u16, // Casted pointer
+                DISPLAY_BUFFER_SIZE / 2          // Half our size (8 * 2 = 16)
+            )
+        };
+
+        // Now we can safely all fill for the fastest filling possible.
+        u16_buffer.fill(colour);
+
+        let colour_bytes = colour.to_be_bytes();
         for pixel in buffer.chunks_exact_mut(2) {
             pixel.copy_from_slice(&colour_bytes);
         }

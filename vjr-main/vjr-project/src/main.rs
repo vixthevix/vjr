@@ -113,36 +113,6 @@ async fn rx_task(rx: Receiver<'static, NoopRawMutex, ChannelMessage, 5>) -> ! {
 }
 
 
-#[embassy_executor::task]
-async fn screen_task(mut display: Display<'static>) -> ! {
-    
-    display.fill(Display::rgb(0, 0, 0)); // Black
-
-    // Create a fun display!
-
-    let mut r: u16 = 0;
-    let mut g: u16 = 0;
-    let mut b: u16 = 0;
-
-    let fps  : u8  = 60;
-    let _delay: u16 = ((1 as f32 / fps as f32) * 1_000.0) as u16;
-    
-    let mut i: u16 = 0;
-
-    loop {
-        display.fill(Display::rgb(r as u8, g as u8, b as u8));
-        
-        r = (i) % 255;
-        g = (i * 2) % 255;
-        b = (i * 4) % 255;
-        
-        i = (i + 10) % 255;
-        
-        // Let other tasks run
-        yield_now().await;
-    }
-}
-
 // Specific video buffer pusher for Home menu
 struct HomePusher<'a> {
     display: *mut Display<'a>,
@@ -202,50 +172,6 @@ async fn main(spawner: Spawner) {
             .expect("Failed to initialize Wi-Fi controller");
     let _wifi_interface = esp_radio::wifi::Interface::station();
     
-    
-    // VJR SETUP
-
-    // Display setup
-    let pinout      = display_pinout_new!(peripherals);
-    let cmd_buffer  = display_cmd_buffer_init!(DISPLAY_CMD_BUFFER);
-    let dma_channel = peripherals.DMA_SPI2;
-
-    let mut display = Display::new(pinout, dma_channel, cmd_buffer);
-
-    
-    // All right, time for a proper BIOS
-    // Split into two sections: ROM Listener and Home Menu.
-    
-    // For Home Menu, we will need a Scene for graphics
-    
-    let pusher = HomePusher::new(&mut display);
-
-    let mut renderer = Renderer::new(pusher);
-
-    let mut home_scene = Scene::new(RGB::WHITE);
-
-    let triangle = Triangle::new_equilateral(Coord2D::new(160, 120), 10)
-        .with_outline(Display::rgb(135, 20, 45))
-        .with_fill(Display::rgb(30, 100, 200));
-    
-    // home_scene.add(&mut triangle);
-    
-    loop {
-        loop { // Home menu
-        
-            
-            renderer.draw_scene(&mut home_scene);
-        }
-        
-        loop { // Background BIOS
-            
-        }
-    
-        // Home button pressed signal received, returning to start of loop.
-    }
-
-    
-
     // TODO: Spawn some tasks
     let _ = spawner;
 
@@ -267,7 +193,54 @@ async fn main(spawner: Spawner) {
     spawner.spawn(tx_even_task(tx_even).unwrap());
     spawner.spawn(tx_odd_task(tx_odd)  .unwrap());
     spawner.spawn(rx_task(rx)          .unwrap());
-    spawner.spawn(screen_task(display).unwrap()); 
+    
+    
+    ///////////////////////////////////////////////
+    // VJR SETUP                                //
+    ///////////////////////////////////////////////
+    
+    // Display setup
+    let pinout      = display_pinout_new!(peripherals);
+    let cmd_buffer  = display_cmd_buffer_init!(DISPLAY_CMD_BUFFER);
+    let dma_channel = peripherals.DMA_SPI2;
+
+    let mut display = Display::new(pinout, dma_channel, cmd_buffer);
+
+    
+    // All right, time for a proper BIOS
+    // Split into two sections: ROM Listener and Home Menu.
+    
+    // For Home Menu, we will need a Scene for graphics
+    
+    let pusher = HomePusher::new(&mut display);
+
+    let mut renderer = Renderer::new(pusher);
+
+    let mut home_scene = Scene::new(Display::rgb(220, 20, 60));
+
+    let triangle = Triangle::new_equilateral(Coord2D::new(160, 120), 10)
+        .with_outline(Display::rgb(135, 20, 45))
+        .with_fill(Display::rgb(30, 100, 200));
+    
+    // home_scene.add(&mut triangle);
+    
+    loop {
+        loop { // Home menu
+        
+            
+            renderer.draw_scene(&mut home_scene);
+            yield_now().await;
+        }
+        
+        loop { // Background BIOS
+            
+        }
+    
+        // Home button pressed signal received, returning to start of loop.
+    }
+
+    
+
 
     // for inspiration have a look at the examples at https://github.com/esp-rs/esp-hal/tree/esp-hal-v1.2.2/examples
 }
