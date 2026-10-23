@@ -1,6 +1,9 @@
 
 List of links that I find important for reference/learning.
 
+// esp-hal crate source
+https://docs.espressif.com/projects/rust/esp-hal/1.2.0/esp32/esp_hal/index.html
+
 // Includes tons of info on interacting with hardware peripherals.
 https://esp32.implrust.com/index.html
 
