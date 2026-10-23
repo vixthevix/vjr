@@ -53,11 +53,9 @@ use embedded_graphics_core::{
         // RgbColor, // Trait
         Rgb565 as RGB // We are only really dealing with rgb565
     },
-    draw_target::DrawTarget, // Trait
 };
 
 extern crate alloc;
-
 
 // Macros 
 
@@ -90,8 +88,103 @@ macro_rules! display_cmd_buffer_init {
     }
 }
 
-pub const DISPLAY_CMD_BUFFER_SIZE: usize = 16;
 
+// Enum for commands that can be communicated to the display with.
+// Datasheet used: https://cdn-shop.adafruit.com/datasheets/ILI9341.pdf
+#[repr(u8)]                   // C-style enum, each value can be treated as u8  
+#[derive(Clone, Copy, Debug)] // Give Copy and Clone access, to match u8 repr
+pub enum Command {
+    Nop = 0x00,
+    SoftwareReset = 0x01,
+    ReadDisplayId = 0x04,
+    ReadDisplayStatus = 0x09,
+    ReadDisplayPower = 0x0A,
+    ReadDisplay = 0x0B,
+    ReadDisplayPixel = 0x0C,
+    ReadDisplayImage = 0x0D,
+    ReadDisplaySignal = 0x0E,
+    ReadDisplayDiagnosis = 0x0F,
+    SleepOn = 0x10,
+    SleepOff = 0x11,
+    PartialModeOn = 0x12,
+    PartialModeOff = 0x13,
+    DisplayInversionOff = 0x20,
+    DisplayInversionOn = 0x21,
+    GammaSet = 0x26,
+    DisplayOff = 0x28,
+    DisplayOn = 0x29,
+    SetColumnCoords = 0x2A,
+    SetRowCoords = 0x2B,
+    MemoryWrite = 0x2C,
+    ColourSet = 0x2D,
+    MemoryRead = 0x2E,
+    PartialAreaSet = 0x30,
+    VerticalScrollAreaSet = 0x33,
+    TearingEffectOff = 0x34,
+    TearingEffectOn = 0x35,
+    MemoryAccessCtrl = 0x36,
+    VerticalScrollStartSet = 0x37,
+    IdleOff = 0x38,
+    IdleOn = 0x39,
+    SetColourMode = 0x3A,
+    MemoryWriteContinue = 0x3C,
+    MemoryReadContinue = 0x3E,
+    TearScanlineSet = 0x44,
+    ScanlineGet = 0x45,
+    BrightnessSet = 0x51,
+    BrightnessGet = 0x52,
+    CtrlDisplaySet = 0x53,
+    CtrlDisplayGet = 0x54,
+    AdaptiveBrightnessSet = 0x55,
+    AdaptiveBrightnessGet = 0x56,
+    CABCBrightnessGet = 0x5E,
+    CABCBrightnessSet = 0x5F,
+    ReadId1 = 0xDA,
+    ReadId2 = 0xDB,
+    ReadId3 = 0xDC,
+    RGBInterfaceSignalCtrl = 0xB0,
+    FramerateCtrlNormal = 0xB1,
+    FramerateCtrlIdle = 0xB2,
+    FramerateCtrlPartial = 0xB3,
+    DisplayInversionCtrl = 0xB4,
+    BlankingPorchCtrl = 0xB5,
+    DisplayFunctionCtrl = 0xB6,
+    EntryModeSet = 0xB7,
+    BacklightCtrl1 = 0xB8,
+    BacklightCtrl2 = 0xB9,
+    BacklightCtrl3 = 0xBA,
+    BacklightCtrl4 = 0xBB,
+    BacklightCtrl5 = 0xBC,
+    BacklightCtrl7 = 0xBE,
+    BacklightCtrl8 = 0xBF,
+    PowerCtrl1 = 0xC0,
+    PowerCtrl2 = 0xC1,
+    PowerCtrl3 = 0xC2,
+    PowerCtrl4 = 0xC3,
+    PowerCtrl5 = 0xC4,
+    VcomCtrl1 = 0xC5,
+    VcomCtrl2 = 0xC7,
+    NVMemoryWrite = 0xD0,
+    NVMemoryProtectionKey = 0xD1,
+    NVMemoryStatusRead = 0xD2,
+    ReadID4 = 0xD3,
+    GammaCorrectionPlus = 0xE0,
+    GammaCorrectionMinus = 0xE1,
+    DigitalGammaCtrl1 = 0xE2,
+    DigitalGammaCtrl2 = 0xE3,
+    InterfaceCtrl = 0xF6,
+    PowerCtrlA = 0xCB,
+    PowerCtrlB = 0xCF,
+    DriverInternalTimingCtrlA = 0xE8,
+    DriverExternalTimingCtrlA = 0xE9,
+    DriverTimingCtrlB = 0xEA,
+    PowerOnSequenceCtrl = 0xED,
+    EnableGammaCtrl3 = 0xF2,
+    PumpRatioCtrl = 0xF7,
+}
+
+
+pub const DISPLAY_CMD_BUFFER_SIZE: usize = 16;
 
 // Type aliases for clear code
 pub type DisplaySpiBus<'a> = SpiDma<'a, esp_hal::Blocking>;
@@ -145,8 +238,9 @@ impl<'a> Display<'a> {
         let mut spi_dev   = ExclusiveDevice::new_no_delay(spi, cs).unwrap();
         let mut interface = SpiInterface::new(&mut spi_dev, &mut dc, cmd_buffer); 
         
+        // Start up the screen with mipidsi driver, before handing off control to Display
         let mut delay = Delay::new();
-        let interface = Builder::new(ILI9341Rgb565, &mut interface)
+        let _interface = Builder::new(ILI9341Rgb565, &mut interface)
             .reset_pin(res)
             .invert_colors(ColorInversion::Inverted) 
             .color_order(ColorOrder::Bgr)
@@ -169,12 +263,12 @@ impl<'a> Display<'a> {
         )
     }
     
-    fn execute(&mut self, command: u8, arguments: &[u8]) {
+    fn execute(&mut self, command: Command, arguments: &[u8]) {
         // For command mode => dc = 0
         // For raw mode     => dc = 1
 
         self.data_mode.set_low();
-        self.interface.write(&[command]).unwrap();
+        self.interface.write(&[command as u8]).unwrap();
 
         self.data_mode.set_high();
         self.interface.write(arguments).unwrap();
@@ -204,13 +298,13 @@ impl<'a> Display<'a> {
         let y2 = y2.to_be_bytes();
         
         // Column set
-        self.execute(0x2a, &[x1[0], x1[1], x2[0], x2[1]]);
+        self.execute(Command::SetColumnCoords, &[x1[0], x1[1], x2[0], x2[1]]);
 
         // Row set
-        self.execute(0x2b, &[y1[0], y1[1], y2[0], y2[1]]);
+        self.execute(Command::SetRowCoords, &[y1[0], y1[1], y2[0], y2[1]]);
 
         // Memory write
-        self.execute(0x2c, buffer);
+        self.execute(Command::MemoryWrite, buffer);
     }
 }
 

@@ -16,7 +16,6 @@ use embedded_graphics_core::{
     },
 };
 
-use crate::video::display::*;
 use crate::video::renderer::DISPLAY_BUFFER_SIZE;
 
 /*
@@ -181,13 +180,11 @@ impl Image {
         // Copy over metadata about the VIMG
         // Metadata ends once VIMG end guard reached.
         let mut i: usize = 9;
-        let mut meta_length: usize = 0;
         loop {
             let guard = &data[i..i+4];
             if guard == b"VIMG" {
                 break;
             }
-            meta_length += 1;
             i += 1;
         }
         

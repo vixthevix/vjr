@@ -16,16 +16,6 @@ use log::info;
 
 use esp_hal::gpio::Output;
 
-use esp_hal::dma_buffers;
-
-use embedded_graphics_core::{
-    pixelcolor::{
-        RgbColor, // Trait
-        Rgb565 as RGB // We are only really dealing with rgb565
-    },
-    draw_target::DrawTarget, // Trait
-};
-
 use embassy_sync::{
     channel::{
         Channel,
@@ -141,8 +131,8 @@ impl<'a> HomePusher<'a> {
 static CHANNEL: StaticCell<Channel<NoopRawMutex, ChannelMessage, 5>> = StaticCell::new();
 
 // Static display buffers
-display_buffer_new!(DISPLAY_BUFFER_A);
-display_buffer_new!(DISPLAY_BUFFER_B);
+// display_buffer_new!(DISPLAY_BUFFER_A);
+// display_buffer_new!(DISPLAY_BUFFER_B);
 display_cmd_buffer_new!(DISPLAY_CMD_BUFFER);
 
 #[allow(
@@ -218,7 +208,7 @@ async fn main(spawner: Spawner) {
 
     let mut home_scene = Scene::new(Display::rgb(220, 20, 60));
 
-    let triangle = Triangle::new_equilateral(Coord2D::new(160, 120), 10)
+    let _triangle = Triangle::new_equilateral(Coord2D::new(160, 120), 10)
         .with_outline(Display::rgb(135, 20, 45))
         .with_fill(Display::rgb(30, 100, 200));
     
@@ -226,15 +216,13 @@ async fn main(spawner: Spawner) {
     
     loop {
         loop { // Home menu
-        
-            
             renderer.draw_scene(&mut home_scene);
             yield_now().await;
         }
         
-        loop { // Background BIOS
-            
-        }
+//        loop { // Background BIOS
+//            
+//        }
     
         // Home button pressed signal received, returning to start of loop.
     }

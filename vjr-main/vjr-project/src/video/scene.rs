@@ -1,7 +1,6 @@
 
 use embedded_graphics_core::{
     pixelcolor::{
-        RgbColor, // Trait
         Rgb565 as RGB // We are only really dealing with rgb565
     },
 };

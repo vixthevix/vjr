@@ -2,7 +2,6 @@
 use embedded_graphics_core::{
     prelude::RawData,
     pixelcolor::{
-        RgbColor, // Trait
         Rgb565 as RGB, // We are only really dealing with rgb565
         raw::RawU16
     },
@@ -91,9 +90,5 @@ impl<P: Pusher> Renderer<P> {
         // Now we can safely all fill for the fastest filling possible.
         u16_buffer.fill(colour);
 
-        let colour_bytes = colour.to_be_bytes();
-        for pixel in buffer.chunks_exact_mut(2) {
-            pixel.copy_from_slice(&colour_bytes);
-        }
     }
 }
