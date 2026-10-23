@@ -1,0 +1,109 @@
+#####################
+# WHAT IS A SPRITE? #
+#####################
+
+In our graphical system, a Sprite is an encapsulation of a series of vertices, connected in a particular way,
+with a given texture or colour.
+
+An example of a Sprite can be something as basic as a Triangle, or something as complex as an Animation.
+
+This does not include 3D shapes, that will be a matter for a different day, though the transfer of 2D to 3D should be
+okay.
+
+
+###################
+# DRAWING SPRITES #
+###################
+
+For each Sprite, we have an array of vertices that make it up.
+
+We need to draw lines between vertices based on their indice order (either also stored with the object, or inferred
+based on the Sprite type).
+
+Filling in this area is the most difficult part, because we essentially need to bind pixel data to an area
+that isn't always a simple box, such as with a Triangle.
+
+To deal with this, the first complex Sprite to be made will be the NGon.
+
+
+####################
+# WHAT IS AN NGON? #
+####################
+
+An NGon is a shape with N (x, y) vertices, spread uniformly around a center point at a given radius.
+
+Because of the flexibility with the input parameter N, we can define so many shapes with an NGON.
+
+For instance, 
+	N = 3 results in an equilateral Triangle, 
+	N = 4 results in a Square,
+	N = 100 results in a hectagon, though with this many vertices, it may as well look like a Circle :)
+
+So figuring out how to fill in an NGon, allows us to fill in all these other shapes for free :)
+
+Here is my C code for generating points about a center for an NGon:
+
+(insert here from CGame)
+
+###################
+# FILLING AN NGON #
+###################
+
+The process of filling in an area bounded by vertices in a graphical, bitmap system is called Rasterization.
+
+There is a link to Rasterization in links.txt, but basically, traditional Rasterization is computationally expensive,
+especially for a diverse shape such as an NGon on an embedded system such as an ESP32.
+
+To deal with this, we will be using a smart OpenGL-like method, 
+where we treat each pair of subsequent vertices as points on a triangle, 
+with the final point being the center of the NGon.
+
+So now, all we have to do is fill in each of these triangles, and the NGon fills itself.
+
+(This technique is called Triangulisation)
+
+Luckily for us, there is a standard, single-threaded way of filling in triangles in a graphical setting,
+called Scanline Rasterization (again, see links.txt).
+
+With all of this in mind, we have filled an NGon!
+
+
+################
+# OTHER SHAPES #
+################
+
+While the NGon is definitely the most generic shape we can make, other shapes can be rendered differently.
+
+For example, a Triangle can have its 3 vertices stored and manipulated, to have not just equilateral triangles made,
+while still keeping Scanline Rasterization.
+
+And Quadrilaterals in general, are very easy to fill, needing just a double for loop between top-left and bottom-right(maybe, things like rotation may result in Triangulisation instead, but like with the Triangle we can manipulate
+side lengths).
+
+
+####################
+# DRAWING TEXTURES #
+####################
+
+A Texture is another word for, essentially, an imported image (in this case, a VIMG).
+
+Textures pose a problem because, unlike with solid colour filling, the ORIENTATION of the Texture matters.
+
+Say we have a Textured Square (which I will refer to as an Image). for a normal orientation, we can just copy
+over the VIMG pixels in. But when the Image is rotated, we expect the Texture to rotate as well.
+But instead, the Texture is drawn normally, and it looks weird.
+
+So, for a Texture, we need a notation of orientation. Generally, this is expressed using (U, V) coordinates for the
+Texture. Each vertex of your Sprite maps to a UV coordinate, and pixel reading is done from that UV coordinate, at
+the angle that the Sprite is currently at.
+
+Due to the wide range in diversity that a Texture can have in terms of width and size, a Texture's UV bounds is
+usually confined to a (-1, -1) -> (1, 1) range, though for our case it can be arbitrary.
+
+Its good to keep a small range, because it increases the accuracy of the Texture drawn by keeping pixel reading angles
+to a minimum, kinda. This is a part of the code I will need to experiment with.
+
+Also, because we will most likely be needing rational numbers, we will either need to use floats (expensive) or
+fixed point rationals (custom struct, cheaper than floats). 
+
+Again, consult links.txt for more information.
