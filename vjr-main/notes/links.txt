@@ -22,3 +22,10 @@ https://docs.espressif.com/projects/rust/esp-radio/0.16.0/esp32/esp_radio/esp_no
 
 // ESPNOW in detail
 https://cdn.prod.website-files.com/645a4534705010e2cb244f50/67e3ab1eec0b2be8f630f641_Nozomi-Networks-WP-ESP-NOW.pdf
+
+// Raterization guide
+https://www.scratchapixel.com/lessons/3d-basic-rendering/rasterization-practical-implementation/overview-rasterization-algorithm.html
+
+// Better rasterization guide
+https://haqr.eu/tinyrenderer/
+
