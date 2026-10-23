@@ -58,6 +58,29 @@ impl Coord3D {
     }
 }
 
+/*
+Texture enum for deciding between colour and loaded image.
+*/
+enum Texture {
+    Colour(RGB, RGB),
+    Image, // Unsure what values to attach right now.
+}
+
+/*
+Ngon shape. A uniform shape with N vertices (Coord2D)
+*/
+
+pub struct Ngon<'a> {
+    center: Coord2D,
+    radius: u16,
+
+    // To save storage, only include vertices and order them, rather than indices as well.
+    vertices: &'a[Coord2D],
+
+    outline_colour: RGB,
+    fill_colour   : RGB,
+}
+
 
 /*
 Triangle shape.
