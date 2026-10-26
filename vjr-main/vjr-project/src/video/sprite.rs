@@ -18,6 +18,8 @@ use embedded_graphics_core::{
 
 use crate::video::renderer::DISPLAY_BUFFER_SIZE;
 
+use heapless::Vec;
+
 /*
 Base trait for all sprites that can be drawn to the screen.
 */
@@ -81,6 +83,26 @@ pub struct Ngon<'a> {
     fill_colour   : RGB,
 }
 
+impl<'a> Ngon<'a> {
+    pub fn new(n: u16, center: Coord2D, radius: u16) -> Self {
+        // Impose a maximum Ngon n size
+        const N_MAX: u16 = 64;
+        assert!(n <= N_MAX);
+
+        // Temporarily store a max size vector, add only what we need, then cast to slice.
+        let mut vertices: Vec<Coord2D, { N_MAX as usize }> = Vec::new(); 
+
+        for i in 0..n {
+            let mut cur_x: isize = 0;
+            let mut cur_y: isize = 0;
+
+            cur_x += center.x;
+            cur_y += center.y;
+
+            vertices.push(Coord2D { x: cur_x, y: cur_y });
+        }
+    }
+}
 
 /*
 Triangle shape.
