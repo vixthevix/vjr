@@ -1,0 +1,70 @@
+###########################
+# TRIGONOMETRIC FUNCTIONS #
+###########################
+
+Trig is important in graphics, for some matrices and for navigation and a lot of other things.
+
+In particular, sine and cos as well as arctan and maybe others.
+
+Ways of doing it include using
+
+https://crates.io/crates/deterministic-trigonometry
+https://crates.io/crates/fixed_trigonometry
+
+But another approach thats common is implementing a lookup table, at the cost of RAM.
+
+
+#####################
+# SINE LOOKUP TABLE #
+#####################
+
+The purpose of a lookup table is to have pre-generated values for a function, which results in very fast "calculations" by looking up the table.
+
+This comes with some drawbacks:
+    Need to reserve RAM/storage for the lookup table.
+    Function input and output ranges normally change.
+    The size of the lookup table determines the accuracy of inputs.
+
+Since the sine function is one that returns mostly floating point numbers, we should try and avoid storing floats.
+The ESP32 does have a good FPU, but the sine function is complicated, and is generally more common in use than other applications of floating point math like matrices and such.
+
+
+As mentioned, we must change the input and output ranges of the function.
+
+For example, we can use a range [0, 4095] for the table. this means 1023 is 90 degrees, 2047 is 180, 3071 is 270, 4095 is 360.
+
+And then we have a fine degree of precision between these values.
+
+For the output (i.e. what we store in this lookup table), it can be in the form i16.
+
+The sine function outputs in the range [-1,1], with most values being floating point. What we can do, then, is map this to something like [-4096, 4096] (i.e. the sine value, multiplied by 4096, or bit shifting by 12).
+
+The only caviat is that we would need to "fix the value" after using this function, and we can't use traditional degrees or radians, just indexes into this table (maybe solvable with macros?)
+
+Also, due to the looping feature of sine, we can put indexes over 4095 and they should still be valid.
+We can modulo the index. Another approach I have seen is, since we are using 4095 as our max (which is 0x0FFF), we can bitwise AND our index with 0x0FFF and it should be identical to modulo, but faster.
+
+So the function would something like this
+
+fn my_sine(index: u16) -> i16 {
+    SINE_TABLE[index & 0x0FFF]
+}
+
+fn my_sine_multiply<T>(x: T, index: u16) -> T {
+    let sin = my_sine(index);
+    let val: T = (x * sin as T) >> 12;
+
+    val
+}
+
+
+########################
+# OTHER TRIG FUNCTIONS #
+########################
+
+For cosine, we can reuse our sine table, just shifted up by 90 degrees, because thats what cosine is lol.
+
+For tangent, which is sine/cos, bit more tricky. what if we get into a sitatuation where sin/cos means something
+like 40/4000? integer division results in this being 0, which is wrong. Even more so division by 0.
+
+also arctan would be important maybe.
