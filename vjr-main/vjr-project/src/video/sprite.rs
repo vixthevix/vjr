@@ -18,6 +18,9 @@ use embedded_graphics_core::{
 
 use crate::video::renderer::DISPLAY_BUFFER_SIZE;
 
+use crate::trig::sine::{sin, sin_mult, ANGLE_360};
+use crate::trig::cosine::{cos, cos_mult};
+
 use heapless::Vec;
 
 /*
@@ -34,6 +37,7 @@ pub trait Sprite {
 /*
 2D Coordinate struct
 */
+#[derive(Debug)]
 pub struct Coord2D {
     pub x: isize,
     pub y: isize,
@@ -72,34 +76,57 @@ enum Texture {
 Ngon shape. A uniform shape with N vertices (Coord2D)
 */
 
-pub struct Ngon<'a> {
+const N_MAX: u16 = 64;
+
+#[derive(Debug)]
+pub struct Ngon {
     center: Coord2D,
     radius: u16,
 
     // To save storage, only include vertices and order them, rather than indices as well.
-    vertices: &'a[Coord2D],
+    vertices: Vec<Coord2D, { N_MAX as usize }>,
 
-    outline_colour: RGB,
-    fill_colour   : RGB,
+    outline: RGB,
+    fill   : RGB,
 }
 
-impl<'a> Ngon<'a> {
+impl Ngon {
     pub fn new(n: u16, center: Coord2D, radius: u16) -> Self {
         // Impose a maximum Ngon n size
-        const N_MAX: u16 = 64;
         assert!(n <= N_MAX);
 
         // Temporarily store a max size vector, add only what we need, then cast to slice.
         let mut vertices: Vec<Coord2D, { N_MAX as usize }> = Vec::new(); 
 
         for i in 0..n {
-            let mut cur_x: isize = 0;
-            let mut cur_y: isize = 0;
+            let angle: usize = (ANGLE_360 * i as usize) / n as usize;
 
-            cur_x += center.x;
-            cur_y += center.y;
+            let cur_x: isize = center.x + cos_mult(angle, radius.into()) as isize;
+            let cur_y: isize = center.y + sin_mult(angle, radius.into()) as isize;
 
-            vertices.push(Coord2D { x: cur_x, y: cur_y });
+            let _ = vertices.push(Coord2D { x: cur_x, y: cur_y });
+        }
+
+        Self {
+            center,
+            radius,
+            vertices,
+            outline: RGB::BLACK,
+            fill: RGB::BLACK,
+        }
+    }
+    
+    pub fn with_outline(self, colour: RGB) -> Self {
+        Self {
+            outline: colour,
+            ..self
+        }
+    }
+
+    pub fn with_fill(self, colour: RGB) -> Self {
+        Self {
+            fill: colour,
+            ..self
         }
     }
 }

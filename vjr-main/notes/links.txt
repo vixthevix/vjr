@@ -29,3 +29,8 @@ https://www.scratchapixel.com/lessons/3d-basic-rendering/rasterization-practical
 // Better rasterization guide
 https://haqr.eu/tinyrenderer/
 
+// Builder's algorithm links
+https://personal.math.ubc.ca/~wetton/talks/archimedes22.pdf
+
+// Arctan2 rules
+https://en.wikipedia.org/wiki/Atan2

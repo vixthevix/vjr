@@ -39,7 +39,7 @@ use crate::video::{
 };
 
 pub mod video;
-
+pub mod trig;
 
 extern crate alloc;
 
@@ -180,9 +180,9 @@ async fn main(spawner: Spawner) {
     // spawner.spawn(print_task() .unwrap());
     // spawner.spawn(led_task(led).unwrap());
     
-    spawner.spawn(tx_even_task(tx_even).unwrap());
-    spawner.spawn(tx_odd_task(tx_odd)  .unwrap());
-    spawner.spawn(rx_task(rx)          .unwrap());
+    //spawner.spawn(tx_even_task(tx_even).unwrap());
+    //spawner.spawn(tx_odd_task(tx_odd)  .unwrap());
+    //spawner.spawn(rx_task(rx)          .unwrap());
     
     
     ///////////////////////////////////////////////
@@ -208,12 +208,16 @@ async fn main(spawner: Spawner) {
 
     let mut home_scene = Scene::new(Display::rgb(220, 20, 60));
 
-    let _triangle = Triangle::new_equilateral(Coord2D::new(160, 120), 10)
-        .with_outline(Display::rgb(135, 20, 45))
-        .with_fill(Display::rgb(30, 100, 200));
+    //let _triangle = Triangle::new_equilateral(Coord2D::new(160, 120), 10)
+    //    .with_outline(Display::rgb(135, 20, 45))
+    //    .with_fill(Display::rgb(30, 100, 200));
     
     // home_scene.add(&mut triangle);
     
+    let ngon = Ngon::new(3, Coord2D::new(0, 0), 15);
+
+    info!("{:#?}", ngon);
+
     loop {
         loop { // Home menu
             renderer.draw_scene(&mut home_scene);

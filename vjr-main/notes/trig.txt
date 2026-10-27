@@ -64,7 +64,38 @@ fn my_sine_multiply<T>(x: T, index: u16) -> T {
 
 For cosine, we can reuse our sine table, just shifted up by 90 degrees, because thats what cosine is lol.
 
-For tangent, which is sine/cos, bit more tricky. what if we get into a sitatuation where sin/cos means something
+For tangent, which is sine/cos, bit more tricky. what if we get into a situation where sin/cos means something
 like 40/4000? integer division results in this being 0, which is wrong. Even more so division by 0.
 
-also arctan would be important maybe.
+We could maybe solve this by adding 360 degrees, which in our case would be 4095, but yeah not sure.
+
+We should honestly rely on a heuristic here: we are going to assume that a game does not need tan as much as sin, cos or arctan (below).
+From my experience in OpenGL programming, ive only used tan (specifically, cotan) for building a 3d projection matrix, which I have only really ever done at setup, not at looptime.
+Specifically, cotan is used for adjusting FOV. This could be something that dynamically changes during gameplay, but im just going to bite a bullet here and say "dont do that lol".
+
+
+Arctan is important for finding angles from an origin to an (x, y) coordinate. this makes it key for FPS camera controls among other things, and I have deemed it important enough to have a fast variant.
+
+Arcsin and Arcos, never used during my OpenGL time. Not going to implement for now. The same goes to the other trig identities.
+
+
+
+##########
+# ARCTAN #
+##########
+
+A mentioned, Arctan is important, so lets implement a fast arctan.
+
+Specifically, we should implement a fast atan2 function, that takes in x and y and returns an angle.
+
+We can use a LUT, this is the fastest approach we can take, though again at the cost of memory space.
+
+Alternatively, we can use a memory-free-cost approach with an approximation using the Builder's algorithm (see links.txt)
+
+The approximation is as follows:
+
+    atan2(y,x) = atan(y/x) ~= (pi/2) * (y/(x + y))
+
+We will need to test the speed of this, but it should be fine.
+
+
