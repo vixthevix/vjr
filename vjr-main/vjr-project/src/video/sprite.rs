@@ -138,33 +138,76 @@ impl Ngon {
 }
 
 impl Sprite for Ngon {
+    // Vertex drawing
     fn draw(&self, buffer: &mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16) {
-        // Check bounds
-        let x1: isize = 0;
-        let y1: isize = y_offset as isize;
-        let x2: isize = DISPLAY_BUFFER_WIDTH as isize;
-        let y2: isize = y_offset as isize + DISPLAY_BUFFER_HEIGHT as isize;
+          // Check bounds
+          let x1: isize = 0;
+          let y1: isize = y_offset as isize;
+          let x2: isize = DISPLAY_BUFFER_WIDTH as isize;
+          let y2: isize = y_offset as isize + DISPLAY_BUFFER_HEIGHT as isize;
 
-        // RGB565 means each px is two bytes.
-        let colour = RawU16::from(self.outline).into_inner();
-        let colour = colour.to_be_bytes();
-        
-        // Loop through vertices and draw points onto buffer.
-        for v in &self.vertices {
-            if x1 <= v.x && v.x < x2 && y1 <= v.y && v.y < y2 {
-                // We can draw here.
-                // x does not change, but y is offsetted back.
-                let px_x = v.x;
-                let px_y = v.y - y_offset as isize;
+          // RGB565 means each px is two bytes.
+          let colour = RawU16::from(self.outline).into_inner();
+          let colour = colour.to_be_bytes();
+          
+          // Loop through vertices and draw points onto buffer.
+          for v in &self.vertices {
+              if x1 <= v.x && v.x < x2 && y1 <= v.y && v.y < y2 {
+                  // We can draw here.
+                  // x does not change, but y is offsetted back.
+                  let px_x = v.x;
+                  let px_y = v.y - y_offset as isize;
 
-                // Buffer is 1D, and each px is two bytes.
-                let index: usize = ((px_x + (DISPLAY_BUFFER_WIDTH as isize * px_y)) * 2) as usize;
+                  // Buffer is 1D, and each px is two bytes.
+                  let index: usize = ((px_x + (DISPLAY_BUFFER_WIDTH as isize * px_y)) * 2) as usize;
 
-                buffer[index]     = colour[0];
-                buffer[index + 1] = colour[1];
-            }
-        }
-    }
+                  buffer[index]     = colour[0];
+                  buffer[index + 1] = colour[1];
+              }
+          }
+      }
+
+    // Line drawing
+//    fn draw(&self, buffer: &mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16) {
+//        // Check bounds
+//        let x1: isize = 0;
+//        let y1: isize = y_offset as isize;
+//        let x2: isize = DISPLAY_BUFFER_WIDTH as isize;
+//        let y2: isize = y_offset as isize + DISPLAY_BUFFER_HEIGHT as isize;
+//
+//        // RGB565 means each px is two bytes.
+//        let outline = RawU16::from(self.outline).into_inner().to_be_bytes();
+//
+//        // We will be using Bresenham's line drawing.
+//        // Need each pair of close points.
+//        
+//        for i in 0..self.vertices.len() {
+//            let p1 = self.vertices[i];
+//            let p2 = self.vertices[(i + 1) % self.vertices.len()];
+//
+//            // If both points are out of range, we do not draw this line.
+//            if !(p1.y < y1 && p2.y < y1 || p1.y > y2 && p2.y > y2) {
+//                // We can draw a line here.
+//                // Normal Bresenham involves a t between 0 and 1, a float.
+//                // Instead, we can inflate to high values and then divide down.
+//                let p1 = Coord2D::new(p1.x << 8, p1.y << 8);
+//                let p2 = Coord2D::new(p2.x << 8, p2.y << 8);
+//                let x_dif = p2.x - p1.x;
+//                let y_dif = p2.y - p1.y;
+//                for t in 0..256 {
+//                     let x = (p1.x + (x_dif * t)) >> 8;
+//                     let y = ((p1.y + (y_dif * t)) >> 8) - y_offset;
+//
+//                     if (y < y1 || y > y2) { continue; }
+//
+//                     // Buffer is 1D, and each px is two bytes.
+//                     let index: usize = ((x + (DISPLAY_BUFFER_WIDTH as isize * y)) * 2) as usize;
+//                     buffer[index]     = outline[0];
+//                     buffer[index + 1] = outline[1];
+//                }
+//            }
+//        }
+//    }
 }
 
 /*
