@@ -12,11 +12,17 @@ Image sprite as well.
 use embedded_graphics_core::{
     pixelcolor::{
         RgbColor, // Trait
-        Rgb565 as RGB // We are only really dealing with rgb565
+        Rgb565 as RGB, // We are only really dealing with rgb565
+        raw::RawU16,
     },
+    prelude::RawData
 };
 
-use crate::video::renderer::DISPLAY_BUFFER_SIZE;
+use crate::video::renderer::{
+    DISPLAY_BUFFER_SIZE,
+    DISPLAY_BUFFER_WIDTH,
+    DISPLAY_BUFFER_HEIGHT,
+};
 
 use crate::trig::sine::{sin, sin_mult, ANGLE_360};
 use crate::trig::cosine::{cos, cos_mult};
@@ -27,7 +33,7 @@ use heapless::Vec;
 Base trait for all sprites that can be drawn to the screen.
 */
 pub trait Sprite {
-    fn can_draw(&self, top_left: Coord2D, bottom_right: Coord2D);
+    // fn can_draw(&self, top_left: Coord2D, bottom_right: Coord2D);
     fn draw(&self, buffer: & mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16);
 }
 
@@ -127,6 +133,36 @@ impl Ngon {
         Self {
             fill: colour,
             ..self
+        }
+    }
+}
+
+impl Sprite for Ngon {
+    fn draw(&self, buffer: &mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16) {
+        // Check bounds
+        let x1: isize = 0;
+        let y1: isize = y_offset as isize;
+        let x2: isize = DISPLAY_BUFFER_WIDTH as isize;
+        let y2: isize = y_offset as isize + DISPLAY_BUFFER_HEIGHT as isize;
+
+        // RGB565 means each px is two bytes.
+        let colour = RawU16::from(self.outline).into_inner();
+        let colour = colour.to_be_bytes();
+        
+        // Loop through vertices and draw points onto buffer.
+        for v in &self.vertices {
+            if x1 <= v.x && v.x < x2 && y1 <= v.y && v.y < y2 {
+                // We can draw here.
+                // x does not change, but y is offsetted back.
+                let px_x = v.x;
+                let px_y = v.y - y_offset as isize;
+
+                // Buffer is 1D, and each px is two bytes.
+                let index: usize = ((px_x + (DISPLAY_BUFFER_WIDTH as isize * px_y)) * 2) as usize;
+
+                buffer[index]     = colour[0];
+                buffer[index + 1] = colour[1];
+            }
         }
     }
 }
