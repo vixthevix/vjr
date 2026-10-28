@@ -43,7 +43,24 @@ So figuring out how to fill in an NGon, allows us to fill in all these other sha
 
 Here is my C code for generating points about a center for an NGon:
 
-(insert here from CGame)
+for (int k = 0; k < n; k++) {
+	float curx = radius * cosf((2 * k * PI) / (float)n);
+	curx += centerx;
+	float cury = radius * sinf((2 * k * PI) / (float)n);
+	cury += centery;
+
+	target->vertices[k].XYZW[0] = curx;
+	target->vertices[k].XYZW[1] = cury;
+	target->vertices[k].XYZW[2] = 0;
+	target->vertices[k].XYZW[3] = 1;
+
+	target->vertices[k].RGBA[0] = colours[0];
+	target->vertices[k].RGBA[1] = colours[1];
+	target->vertices[k].RGBA[2] = colours[2];
+	target->vertices[k].RGBA[3] = colours[3];
+}
+
+NOTE: We will need an efficient Sine and Cosine function for this. Either look online for one, OR use sine cosine look ups (this will require limiting the value of N, which I plan to do anyway).
 
 ###################
 # FILLING AN NGON #
