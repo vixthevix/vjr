@@ -214,7 +214,7 @@ async fn main(spawner: Spawner) {
     
     // home_scene.add(&mut triangle);
     
-    let mut ngon = Ngon::new(3, Coord2D::new(160, 120), 15).with_outline(Display::rgb(255, 255, 255));
+    let mut ngon = Ngon::new(16, Coord2D::new(160, 120), 45).with_outline(Display::rgb(255, 255, 255));
     
     home_scene.add(&mut ngon);
 
