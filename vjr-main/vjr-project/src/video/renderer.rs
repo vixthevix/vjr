@@ -78,6 +78,7 @@ impl<P: Pusher> Renderer<P> {
         let u16_container = RawU16::from(bg_colour);
         let colour = u16_container.into_inner();
         
+        let colour = (colour << 8) | (colour >> 8);
         // UNSAFE
         // Rust slices have the 'fill' method, which does what you think it does.
         // However, colour is a u16, not a u8, so we have to perform type casting here.

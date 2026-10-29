@@ -206,7 +206,7 @@ async fn main(spawner: Spawner) {
 
     let mut renderer = Renderer::new(pusher);
 
-    let mut home_scene = Scene::new(Display::rgb(220, 20, 60));
+    let mut home_scene = Scene::new(Display::rgb(0, 0, 0));
 
     //let _triangle = Triangle::new_equilateral(Coord2D::new(160, 120), 10)
     //    .with_outline(Display::rgb(135, 20, 45))
@@ -214,7 +214,9 @@ async fn main(spawner: Spawner) {
     
     // home_scene.add(&mut triangle);
     
-    let ngon = Ngon::new(3, Coord2D::new(0, 0), 15);
+    let mut ngon = Ngon::new(3, Coord2D::new(160, 120), 15).with_outline(Display::rgb(255, 255, 255));
+    
+    home_scene.add(&mut ngon);
 
     info!("{:#?}", ngon);
 

@@ -43,6 +43,8 @@ use mipidsi::{
     options::{
         ColorInversion, // Corrects colour
         ColorOrder,     // RGB <-> BGR
+        Orientation,    // Landscape/Portrait
+        Rotation,
     }, 
     Builder,
     models::ILI9341Rgb565 // Fairly sure this is the right one
@@ -244,6 +246,7 @@ impl<'a> Display<'a> {
             .reset_pin(res)
             .invert_colors(ColorInversion::Inverted) 
             .color_order(ColorOrder::Bgr)
+            .orientation(Orientation::new().rotate(Rotation::Deg90))
             .init(&mut delay).unwrap();
 
         Display {

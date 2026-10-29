@@ -31,8 +31,8 @@ impl Scene {
     /*
     Adds a Sprite to the Scene, and returns a handle (index) to that Sprite.
     */
-    pub fn add(&mut self, sprite: &'static mut dyn Sprite) -> usize {
-        let _ = self.sprites.push(sprite as *mut dyn Sprite);
+    pub fn add(&mut self, sprite: *mut dyn Sprite) -> usize {
+        let _ = self.sprites.push(sprite);
         
         self.sprites.len() - 1
     }
