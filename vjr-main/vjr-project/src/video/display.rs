@@ -246,7 +246,7 @@ impl<'a> Display<'a> {
             .reset_pin(res)
             .invert_colors(ColorInversion::Inverted) 
             .color_order(ColorOrder::Bgr)
-            .orientation(Orientation::new().rotate(Rotation::Deg90))
+            .orientation(Orientation::new().rotate(Rotation::Deg90).flip_vertical())
             .init(&mut delay).unwrap();
 
         Display {
