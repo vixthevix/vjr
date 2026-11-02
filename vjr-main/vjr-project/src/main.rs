@@ -40,6 +40,7 @@ use crate::video::{
 
 pub mod video;
 pub mod trig;
+pub mod matrix;
 
 extern crate alloc;
 
