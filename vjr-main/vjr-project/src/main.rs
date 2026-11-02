@@ -51,6 +51,7 @@ esp_bootloader_esp_idf::esp_app_desc!();
 Wrapper for messages sent across channels.
 This is standard for embedded channels.
 */
+#[warn(dead_code)]
 enum ChannelMessage {
     Even(u16),
     Odd(u16),
@@ -169,13 +170,13 @@ async fn main(spawner: Spawner) {
     // Printing to serial, and blinking the LED. (DONE)
     // Setting up a RX/TX channel between two tasks.
     
-    let channel = CHANNEL.init(Channel::new());
+    let _channel = CHANNEL.init(Channel::new());
 
-    let rx = channel.receiver();
-    let tx = channel.sender();
+    let _rx = _channel.receiver();
+    let _tx = _channel.sender();
     
-    let tx_even = tx.clone();
-    let tx_odd  = tx.clone();
+    let _tx_even = _tx.clone();
+    let _tx_odd  = _tx.clone();
 
     // spawner.spawn(print_task() .unwrap());
     // spawner.spawn(led_task(led).unwrap());

@@ -25,8 +25,8 @@ use crate::video::renderer::{
     DISPLAY_BUFFER_HEIGHT,
 };
 
-use crate::trig::sine::{sin, sin_mult, ANGLE_360};
-use crate::trig::cosine::{cos, cos_mult};
+use crate::trig::sine::{sin_mult, ANGLE_360};
+use crate::trig::cosine::{cos_mult};
 
 use heapless::Vec;
 
@@ -72,6 +72,7 @@ impl Coord3D {
 /*
 Texture enum for deciding between colour and loaded image.
 */
+#[warn(dead_code)]
 enum Texture {
     Colour(RGB, RGB),
     Image, // Unsure what values to attach right now.
@@ -225,20 +226,13 @@ impl Sprite for Ngon {
 
         // We will be using Scanline Rasterization.
         // Need each pair of close points, along with center of triangle.
-
+        
+        // Fill draw
         for i in 0..self.vertices.len() {
             let mut a = self.vertices[i];
             let mut b = self.vertices[(i + 1) % self.vertices.len()];
             let mut c = self.center;
-
-            // Keep a record of the points for the outline
-            let mut p1 = a;
-            let mut p2 = b;
-
-            // y = mx + c
-            let m       = if p2.x - p1.x == 0 { 0 } else { (p2.y - p1.y) / (p2.x - p1.x) };
-            let point_c = p1.y - (m * p1.x);
-
+            
             // If all points are out of range, we do not fill.
             if a.y < y1 && b.y < y1 && c.y < y1 || a.y >= y2 && b.y >= y2 && c.y >= y2 { continue; }
             
@@ -278,12 +272,9 @@ impl Sprite for Ngon {
 
                         // Buffer is 1D, and each px is two bytes.
                         let index: usize = ((px_x + (DISPLAY_BUFFER_WIDTH as isize * px_y)) * 2) as usize;
-                        
-                        // Draw outline for first and last point
-                        let colour = if ((m * x) + point_c) == y { outline } else { fill };
 
-                        buffer[index]     = colour[0];
-                        buffer[index + 1] = colour[1];
+                        buffer[index]     = fill[0];
+                        buffer[index + 1] = fill[1];
                     }
                 }
             }
@@ -322,68 +313,63 @@ impl Sprite for Ngon {
                         let index: usize = ((px_x + (DISPLAY_BUFFER_WIDTH as isize * px_y)) * 2) as usize;
 
                         // Draw outline for first and last point
-                        // buffer[index]     = fill[0];
-                        // buffer[index + 1] = fill[1];
-                        
-                        let colour = if ((m * x) + point_c) == y { outline } else { fill };
-
-                        buffer[index]     = colour[0];
-                        buffer[index + 1] = colour[1];
+                        buffer[index]     = fill[0];
+                        buffer[index + 1] = fill[1];
                     }
                 }
             }
         }
         
-//        for i in 0..self.vertices.len() {
-//            let p1 = &self.vertices[i];
-//            let p2 = &self.vertices[(i + 1) % self.vertices.len()];
-//            
-//            if p1.y < y1 && p2.y < y1 || p1.y > y2 && p2.y > y2 { continue; }
-//
-//            let mut ax = p1.x;
-//            let mut ay = p1.y;
-//            let mut bx = p2.x;
-//            let mut by = p2.y;
-//            
-//            let steep: bool = (ax - bx).abs() < (ay - by).abs();
-//            if steep {
-//                // Swap x and y, for transpose
-//                core::mem::swap(&mut ax, &mut ay);
-//                core::mem::swap(&mut bx, &mut by);
-//            }
-//
-//            if ax > bx { // Make left to right
-//                core::mem::swap(&mut ax, &mut bx);
-//                core::mem::swap(&mut ay, &mut by);
-//            }
-//
-//            let mut y = ay;
-//            let mut ierror = 0;
-//            for x in ax..=bx {
-//                
-//                let mut x_t = if steep { y } else { x };
-//                let mut y_t = if steep { x } else { y };
-//
-//                if x1 <= x_t && x_t < x2 && y1 <= y_t && y_t < y2 {
-//                    // We can draw here.
-//                    // x does not change, but y is offsetted back.
-//                    let px_x = x_t;
-//                    let px_y = y_t - y_offset as isize;
-//
-//                    // Buffer is 1D, and each px is two bytes.
-//                    let index: usize = ((px_x + (DISPLAY_BUFFER_WIDTH as isize * px_y)) * 2) as usize;
-//
-//                    buffer[index]     = outline[0];
-//                    buffer[index + 1] = outline[1];
-//                }
-//                
-//                ierror += 2 * (by - ay).abs();
-//                
-//                y      += (if by > ay { 1 } else { -1 }) * (ierror > (bx - ax)) as isize;
-//                ierror -= (2 * (bx - ax))                * (ierror > (bx - ax)) as isize;
-//
-//            }
-//        }        
+        // Outline draw
+        for i in 0..self.vertices.len() {
+            let p1 = &self.vertices[i];
+            let p2 = &self.vertices[(i + 1) % self.vertices.len()];
+            
+            if p1.y < y1 && p2.y < y1 || p1.y > y2 && p2.y > y2 { continue; }
+
+            let mut ax = p1.x;
+            let mut ay = p1.y;
+            let mut bx = p2.x;
+            let mut by = p2.y;
+            
+            let steep: bool = (ax - bx).abs() < (ay - by).abs();
+            if steep {
+                // Swap x and y, for transpose
+                core::mem::swap(&mut ax, &mut ay);
+                core::mem::swap(&mut bx, &mut by);
+            }
+
+            if ax > bx { // Make left to right
+                core::mem::swap(&mut ax, &mut bx);
+                core::mem::swap(&mut ay, &mut by);
+            }
+
+            let mut y = ay;
+            let mut ierror = 0;
+            for x in ax..=bx {
+                
+                let x_t = if steep { y } else { x };
+                let y_t = if steep { x } else { y };
+
+                if x1 <= x_t && x_t < x2 && y1 <= y_t && y_t < y2 {
+                    // We can draw here.
+                    // x does not change, but y is offsetted back.
+                    let px_x = x_t;
+                    let px_y = y_t - y_offset as isize;
+
+                    // Buffer is 1D, and each px is two bytes.
+                    let index: usize = ((px_x + (DISPLAY_BUFFER_WIDTH as isize * px_y)) * 2) as usize;
+
+                    buffer[index]     = outline[0];
+                    buffer[index + 1] = outline[1];
+                }
+                
+                ierror += 2 * (by - ay).abs();
+
+                y      += (if by > ay { 1 } else { -1 }) * (ierror > (bx - ax)) as isize;
+                ierror -= (2 * (bx - ax))                * (ierror > (bx - ax)) as isize;
+            }
+        }        
     }
 }
 
