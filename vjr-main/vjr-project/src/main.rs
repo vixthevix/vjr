@@ -8,7 +8,7 @@
 #![deny(clippy::large_stack_frames)]
 
 use embassy_executor::Spawner;
-use embassy_time::{Duration, Timer};
+use embassy_time::{Duration, Timer, Ticker};
 use esp_backtrace as _;
 use esp_hal::clock::CpuClock;
 use esp_hal::timer::timg::TimerGroup;
@@ -42,6 +42,10 @@ use crate::matrix::{
     prelude::*,
     camera::*,
     projection::*,
+};
+
+use crate::trig::{
+    sine::*,
 };
 
 pub mod video;
@@ -230,7 +234,7 @@ async fn main(spawner: Spawner) {
         .with_outline(Display::rgb(255, 255, 255))
         .with_fill(Display::rgb(220, 20, 60));
 
-    let mut triangle = Ngon::new(6, Coord2D::new(40, 30), 20)
+    let mut triangle = Ngon::new(3, Coord2D::new(40, 30), 20)
         .with_outline(Display::rgb(220, 20, 60)) 
         .with_fill(Display::rgb(255, 255, 255)); 
 
@@ -238,12 +242,21 @@ async fn main(spawner: Spawner) {
     home_scene.add(&mut triangle);
 
     info!("{:#?}", ngon);
-
     
+    let angle = ANGLE_90 >> 4; // ~5 degrees
+
+    let pivot = Coord2D::new(160, 120);
+    
+    // Game ticker for 60 FPS
+    let mut ticks = Ticker::every(Duration::from_hz(60));
+
     loop {
         loop { // Home menu
+            triangle.rotate_by(angle);
+            ngon.rotate_around(pivot, angle);
             renderer.draw_scene(&mut home_scene, &camera);
-            yield_now().await;
+            
+            ticks.next().await;
         }
         
 //        loop { // Background BIOS

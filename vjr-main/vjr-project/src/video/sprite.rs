@@ -153,6 +153,24 @@ impl Ngon {
             ..self
         }
     }
+    
+    // Rotation around center
+    pub fn rotate_by(&mut self, angle: usize) {
+        self.matrix.rotate(angle, Axis::Z);
+    }
+    
+    // Rotation around pivot
+    pub fn rotate_around(&mut self, pivot: Coord2D, angle: usize) {
+        // Build a matrix representing the entire transformation
+        let mut t = Matrix::identity();
+        t.translate(pivot.x, pivot.y, 0);   // Shift to position
+        t.rotate(angle, Axis::Z);           // Rotate
+        t.translate(-pivot.x, -pivot.y, 0); // Shift to origin
+        
+        // Apply the transformation
+        self.matrix = Matrix::mult_matrices(&t, &self.matrix);
+    }
+
 }
 
 impl Sprite for Ngon {

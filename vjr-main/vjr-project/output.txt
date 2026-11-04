@@ -3,7 +3,7 @@ Crystal frequency: 40 MHz
 Flash size:        4MB
 Features:          WiFi, BT, Dual Core, 240MHz, VRef calibration in efuse, Coding Scheme None
 MAC address:       88:57:21:d6:06:30
-App/part. size:    568,816/4,128,768 bytes, 13.78%
+App/part. size:    570,400/4,128,768 bytes, 13.82%
 Commands:
     CTRL+R    Reset chip
     CTRL+C    Exit
@@ -31,13 +31,13 @@ I (53) boot:  0 nvs              WiFi data        01 02 00009000 00006000
 I (60) boot:  1 phy_init         RF data          01 01 0000f000 00001000
 I (67) boot:  2 factory          factory app      00 00 00010000 003f0000
 I (73) boot: End of partition table
-I (76) esp_image: segment 0: paddr=00010020 vaddr=3f400020 size=192e0h (103136) map
-I (121) esp_image: segment 1: paddr=00029308 vaddr=3ffb0000 size=03d20h ( 15648) load
-I (127) esp_image: segment 2: paddr=0002d030 vaddr=40080000 size=02fe8h ( 12264) load
-I (132) esp_image: segment 3: paddr=00030020 vaddr=400d0020 size=5eacch (387788) map
-I (271) esp_image: segment 4: paddr=0008eaf4 vaddr=40082fe8 size=0c2d4h ( 49876) load
-I (299) boot: Loaded app from partition at offset 0x10000
-I (299) boot: Disabling RNG early entropy source...
+I (76) esp_image: segment 0: paddr=00010020 vaddr=3f400020 size=19470h (103536) map
+I (121) esp_image: segment 1: paddr=00029498 vaddr=3ffb0000 size=03d20h ( 15648) load
+I (127) esp_image: segment 2: paddr=0002d1c0 vaddr=40080000 size=02e58h ( 11864) load
+I (132) esp_image: segment 3: paddr=00030020 vaddr=400d0020 size=5ef64h (388964) map
+I (271) esp_image: segment 4: paddr=0008ef8c vaddr=40082e58 size=0c464h ( 50276) load
+I (300) boot: Loaded app from partition at offset 0x10000
+I (300) boot: Disabling RNG early entropy source...
 [32mINFO - Embassy initialized![0m
 [32mINFO - Ngon {
     center: Coord2D {
