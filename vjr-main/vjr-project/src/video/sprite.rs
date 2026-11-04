@@ -95,6 +95,11 @@ const N_MAX: u16 = 64;
 pub struct Ngon {
     center: Coord2D,
     radius: u16,
+    rotation: usize,
+    
+    // Used for tracking orbits about a pivot, for rotate_around
+    orbit_pivot: Option<Coord2D>, // Option since does not always apply, also used as check
+    orbit_rotation: usize,         
 
     // To save storage, only include vertices and order them, rather than indices as well.
     vertices: Vec<(f32, f32), { N_MAX as usize }>,
@@ -124,15 +129,26 @@ impl Ngon {
 
             let _ = vertices.push((cur_x, cur_y));
         }
+        
+        // Default rotation
+        let rotation: usize = 0;
+        
+        // Default orbit
+        let orbit_pivot: Option<Coord2D> = None;
+        let orbit_rotation: usize = 0;
 
         // Initialise matrix
         let mut matrix = Matrix::identity();
         matrix.translate(center.x, center.y, 0);
+        matrix.rotate(rotation, Axis::Z);
         matrix.scale(radius as f32, radius as f32, 1.0);
 
         Self {
             center,
             radius,
+            rotation,
+            orbit_pivot,
+            orbit_rotation,
             vertices,
             matrix,
             outline: RGB::BLACK,
@@ -154,21 +170,37 @@ impl Ngon {
         }
     }
     
+    // Updates matrix with stored information from scratch, prevents floating point math error 
+    fn update_matrix(&mut self) {
+        let mut m = Matrix::identity();
+        
+        if let Some(pivot) = self.orbit_pivot { // If orbiting
+            // Encapsulate the transformation for an orbit
+            m.translate(pivot.x, pivot.y, 0);       // Set at the pivot
+            m.rotate(self.orbit_rotation, Axis::Z); // Rotate around it
+            m.translate(-pivot.x, -pivot.y, 0);     // Set back to origin
+        }
+
+        // Perform Translate Rotate Scale update
+        m.translate(self.center.x, self.center.y, 0);
+        m.rotate(self.rotation, Axis::Z);
+        m.scale(self.radius as f32, self.radius as f32, 1.0);
+
+        self.matrix = m
+    }
+    
     // Rotation around center
-    pub fn rotate_by(&mut self, angle: usize) {
-        self.matrix.rotate(angle, Axis::Z);
+    pub fn rotate_by(&mut self, angle: usize) { 
+        self.rotation = (self.rotation + angle) & 0x0FFF;
+        self.update_matrix();
     }
     
     // Rotation around pivot
     pub fn rotate_around(&mut self, pivot: Coord2D, angle: usize) {
-        // Build a matrix representing the entire transformation
-        let mut t = Matrix::identity();
-        t.translate(pivot.x, pivot.y, 0);   // Shift to position
-        t.rotate(angle, Axis::Z);           // Rotate
-        t.translate(-pivot.x, -pivot.y, 0); // Shift to origin
-        
-        // Apply the transformation
-        self.matrix = Matrix::mult_matrices(&t, &self.matrix);
+        // Update orbit values
+        self.orbit_pivot = Some(pivot);
+        self.orbit_rotation = (self.orbit_rotation + angle) & 0x0FFF;
+        self.update_matrix();
     }
 
 }
@@ -199,7 +231,6 @@ impl Sprite for Ngon {
             
             vertices[i] = Coord2D::new(x, y);
             i += 1;
-            // info!("Coord {i}: ({x}, {y})");
         }
 
         // Get new center

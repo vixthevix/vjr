@@ -244,6 +244,7 @@ async fn main(spawner: Spawner) {
     info!("{:#?}", ngon);
     
     let angle = ANGLE_90 >> 4; // ~5 degrees
+    //let angle = ANGLE_90 >> 2; // ~20 degrees
 
     let pivot = Coord2D::new(160, 120);
     
@@ -256,7 +257,8 @@ async fn main(spawner: Spawner) {
             ngon.rotate_around(pivot, angle);
             renderer.draw_scene(&mut home_scene, &camera);
             
-            ticks.next().await;
+            yield_now().await;
+            // ticks.next().await;
         }
         
 //        loop { // Background BIOS
