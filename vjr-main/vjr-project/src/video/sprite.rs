@@ -25,17 +25,24 @@ use crate::video::renderer::{
     DISPLAY_BUFFER_HEIGHT,
 };
 
-use crate::trig::sine::{sin_mult, ANGLE_360};
-use crate::trig::cosine::{cos_mult};
+use crate::{
+    trig::{
+        sine::{ sin_mult, ANGLE_360 },
+        cosine::{ cos_mult },
+    },
+    matrix::prelude::*,
+};
 
 use heapless::Vec;
+
+use log::info;
 
 /*
 Base trait for all sprites that can be drawn to the screen.
 */
 pub trait Sprite {
     // fn can_draw(&self, top_left: Coord2D, bottom_right: Coord2D);
-    fn draw(&self, buffer: & mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16);
+    fn draw(&self, buffer: & mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16, setup_matrix: Matrix);
 }
 
 
@@ -90,7 +97,9 @@ pub struct Ngon {
     radius: u16,
 
     // To save storage, only include vertices and order them, rather than indices as well.
-    vertices: Vec<Coord2D, { N_MAX as usize }>,
+    vertices: Vec<(f32, f32), { N_MAX as usize }>,
+
+    matrix: Matrix,
 
     outline: RGB,
     fill   : RGB,
@@ -102,21 +111,30 @@ impl Ngon {
         assert!(n <= N_MAX);
 
         // Temporarily store a max size vector, add only what we need, then cast to slice.
-        let mut vertices: Vec<Coord2D, { N_MAX as usize }> = Vec::new(); 
+        let mut vertices: Vec<(f32, f32), { N_MAX as usize }> = Vec::new(); 
 
         for i in 0..n {
             let angle: usize = (ANGLE_360 * i as usize) / n as usize;
 
-            let cur_x: isize = center.x + cos_mult(angle, radius.into()) as isize;
-            let cur_y: isize = center.y + sin_mult(angle, radius.into()) as isize;
+            // let cur_x: isize = cos_mult(angle, radius.into()) as isize;
+            // let cur_y: isize = sin_mult(angle, radius.into()) as isize;
+            
+            let cur_x = cos_mult(angle, 4096) as f32 / 4096.0;
+            let cur_y = sin_mult(angle, 4096) as f32 / 4096.0;
 
-            let _ = vertices.push(Coord2D { x: cur_x, y: cur_y });
+            let _ = vertices.push((cur_x, cur_y));
         }
+
+        // Initialise matrix
+        let mut matrix = Matrix::identity();
+        matrix.translate(center.x, center.y, 0);
+        matrix.scale(radius as f32, radius as f32, 1.0);
 
         Self {
             center,
             radius,
             vertices,
+            matrix,
             outline: RGB::BLACK,
             fill   : RGB::BLACK,
         }
@@ -138,82 +156,8 @@ impl Ngon {
 }
 
 impl Sprite for Ngon {
-    // Line drawing
-//    fn draw(&self, buffer: &mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16) {
-//        let x1: isize = 0;
-//        let y1: isize = y_offset as isize;
-//        let x2: isize = DISPLAY_BUFFER_WIDTH as isize;
-//        let y2: isize = y_offset as isize + DISPLAY_BUFFER_HEIGHT as isize;
-//
-//        // RGB565 means each px is two bytes.
-//        let colour = RawU16::from(self.outline).into_inner();
-//        let colour = colour.to_be_bytes();
-//        
-//        for i in 0..self.vertices.len() {
-//            let p1 = &self.vertices[i];
-//            let p2 = &self.vertices[(i + 1) % self.vertices.len()];
-//            
-//            if p1.y < y1 && p2.y < y1 || p1.y > y2 && p2.y > y2 { continue; }
-//
-//            let mut ax = p1.x;
-//            let mut ay = p1.y;
-//            let mut bx = p2.x;
-//            let mut by = p2.y;
-//            
-//            let steep: bool = (ax - bx).abs() < (ay - by).abs();
-//            if steep {
-//               // Swap x and y, for transpose
-//               let temp = ax;
-//               ax = ay;
-//               ay = temp;
-//               
-//               let temp = bx;
-//               bx = by;
-//               by = temp;
-//            }
-//
-//            if ax > bx { // Make left to right
-//               let temp = ax;
-//               ax = bx;
-//               bx = temp;
-//               
-//               let temp = ay;
-//               ay = by;
-//               by = temp;
-//            }
-//
-//            let mut y = ay;
-//            let mut ierror = 0;
-//            for x in ax..=bx {
-//                
-//                let mut x_t = if steep { y } else { x };
-//                let mut y_t = if steep { x } else { y };
-//
-//                if x1 <= x_t && x_t < x2 && y1 <= y_t && y_t < y2 {
-//                    // We can draw here.
-//                    // x does not change, but y is offsetted back.
-//                    let px_x = x_t;
-//                    let px_y = y_t - y_offset as isize;
-//
-//                    // Buffer is 1D, and each px is two bytes.
-//                    let index: usize = ((px_x + (DISPLAY_BUFFER_WIDTH as isize * px_y)) * 2) as usize;
-//
-//                    buffer[index]     = colour[0];
-//                    buffer[index + 1] = colour[1];
-//                }
-//                
-//                ierror += 2 * (by - ay).abs();
-//                
-//                y      += (if by > ay { 1 } else { -1 }) * (ierror > (bx - ax)) as isize;
-//                ierror -= (2 * (bx - ax))                * (ierror > (bx - ax)) as isize;
-//
-//            }
-//
-//        }        
-//    }
-    
     // Fill drawing
-    fn draw(&self, buffer: &mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16) {
+    fn draw(&self, buffer: &mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16, setup_matrix: Matrix) {
         // Check bounds
         let x1: isize = 0;
         let y1: isize = y_offset as isize;
@@ -223,15 +167,37 @@ impl Sprite for Ngon {
         // RGB565 means each px is two bytes.
         let outline = RawU16::from(self.outline).into_inner().to_be_bytes();
         let fill    = RawU16::from(self.fill)   .into_inner().to_be_bytes();
+        
+        // We must apply our matrix transformations to our vertices.
+        let m = Matrix::mult_matrices(&setup_matrix, &self.matrix); 
+        let mut vertices = [Coord2D { x: 0, y: 0 }; N_MAX as usize];
+        let mut i = 0;
+        for vertex in &self.vertices {
+            let (x_t, y_t, _) = m.apply_to_vertex(vertex.0, vertex.1, 0.0);
+
+            // Mapped to [-1, 1], so return to ([0, 360], [0, 240])
+            let x: isize = ((x_t + 1.0) * 0.5 * 320.0) as isize; 
+            let y: isize = ((1.0 - y_t) * 0.5 * 240.0) as isize; // Grows downwards
+            
+            vertices[i] = Coord2D::new(x, y);
+            i += 1;
+            // info!("Coord {i}: ({x}, {y})");
+        }
+
+        // Get new center
+        let (cx_t, cy_t, _) = m.apply_to_vertex(0.0, 0.0, 0.0);
+        let screen_cx = ((cx_t + 1.0) * 0.5 * 320.0) as isize;
+        let screen_cy = ((1.0 - cy_t) * 0.5 * 240.0) as isize;
+        let screen_center = Coord2D::new(screen_cx, screen_cy);
 
         // We will be using Scanline Rasterization.
         // Need each pair of close points, along with center of triangle.
         
         // Fill draw
         for i in 0..self.vertices.len() {
-            let mut a = self.vertices[i];
-            let mut b = self.vertices[(i + 1) % self.vertices.len()];
-            let mut c = self.center;
+            let mut a = vertices[i];
+            let mut b = vertices[(i + 1) % self.vertices.len()];
+            let mut c = screen_center;
             
             // If all points are out of range, we do not fill.
             if a.y < y1 && b.y < y1 && c.y < y1 || a.y >= y2 && b.y >= y2 && c.y >= y2 { continue; }
@@ -322,8 +288,8 @@ impl Sprite for Ngon {
         
         // Outline draw
         for i in 0..self.vertices.len() {
-            let p1 = &self.vertices[i];
-            let p2 = &self.vertices[(i + 1) % self.vertices.len()];
+            let p1 = vertices[i];
+            let p2 = vertices[(i + 1) % self.vertices.len()];
             
             if p1.y < y1 && p2.y < y1 || p1.y > y2 && p2.y > y2 { continue; }
 

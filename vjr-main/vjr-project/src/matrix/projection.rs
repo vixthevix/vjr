@@ -5,7 +5,7 @@ Projection implementation for graphical pipeline
 use crate::matrix::prelude::*;
 use crate::trig::*;
 
-struct Projection {
+pub struct Projection {
     matrix: Matrix,
     depth: f32,
 }
@@ -29,7 +29,7 @@ impl Projection {
 
                 -(right + left) / (right - left),
                 -(top + bottom) / (top - bottom),
-                -(vfar - vnear) / (vfar - vnear),
+                -(vfar + vnear) / (vfar - vnear),
                 1.0
             ]
         );
@@ -38,5 +38,9 @@ impl Projection {
             matrix,
             depth,
         }
+    }
+
+    pub fn get_matrix(&self) -> Matrix {
+        self.matrix
     }
 }

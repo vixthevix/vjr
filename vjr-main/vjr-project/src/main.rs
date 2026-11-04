@@ -38,6 +38,12 @@ use crate::video::{
     scene::*,
 };
 
+use crate::matrix::{
+    prelude::*,
+    camera::*,
+    projection::*,
+};
+
 pub mod video;
 pub mod trig;
 pub mod matrix;
@@ -207,8 +213,12 @@ async fn main(spawner: Spawner) {
     let pusher = HomePusher::new(&mut display);
 
     let mut renderer = Renderer::new(pusher);
+    
+    // Construct our projection and camera
+    let projection = Projection::new_2D(1.0);
+    let camera     = Camera::new(0, 0, 0);
 
-    let mut home_scene = Scene::new(Display::rgb(0, 0, 0));
+    let mut home_scene = Scene::new(Display::rgb(0, 0, 0), projection);
 
     //let _triangle = Triangle::new_equilateral(Coord2D::new(160, 120), 10)
     //    .with_outline(Display::rgb(135, 20, 45))
@@ -229,9 +239,10 @@ async fn main(spawner: Spawner) {
 
     info!("{:#?}", ngon);
 
+    
     loop {
         loop { // Home menu
-            renderer.draw_scene(&mut home_scene);
+            renderer.draw_scene(&mut home_scene, &camera);
             yield_now().await;
         }
         

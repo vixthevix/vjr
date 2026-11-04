@@ -4,7 +4,7 @@ Camera implementation for graphical pipeline
 
 use crate::matrix::prelude::*;
 
-struct Camera {
+pub struct Camera {
     matrix: Matrix,
     x: isize,
     y: isize,
@@ -14,7 +14,7 @@ struct Camera {
 impl Camera {
     pub fn new(x: isize, y: isize, z: isize) -> Self {
         let mut matrix = Matrix::identity();
-        matrix.translate(x, y, z);
+        matrix.translate(-x, -y, -z);
 
         Self {
             matrix,
@@ -28,11 +28,14 @@ impl Camera {
         self.x += x_offset;
         self.y += y_offset;
         self.z += z_offset;
-        self.matrix.translate(x_offset, y_offset, z_offset);
+        self.matrix.translate(-x_offset, -y_offset, -z_offset);
     }
 
     pub fn move_to(&mut self, x: isize, y: isize, z: isize) {
         self.move_by(self.x - x, self.y - y, self.z - z);
     }
-
+    
+    pub fn get_matrix(&self) -> Matrix {
+        self.matrix
+    }
 }

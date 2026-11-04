@@ -7,8 +7,16 @@ use embedded_graphics_core::{
     },
 };
 
-use crate::video::pusher::Pusher;
-use crate::video::scene::*;
+use crate::{
+    video::{
+        pusher::Pusher,
+        scene::*,
+    },
+    matrix::{
+        camera::Camera,
+        prelude::*,
+    },
+};
 
 pub const DISPLAY_BUFFER_SIZE: usize = 10240;
 
@@ -47,11 +55,14 @@ impl<P: Pusher> Renderer<P> {
         }
     }
 
-    pub fn draw_scene(&mut self, scene: &mut Scene) {
+    pub fn draw_scene(&mut self, scene: &mut Scene, camera: &Camera) {
         let mut buffer_swap = true;
         
         // Deconstruct self
         let Self { buffer_a, buffer_b, pusher } = self;
+        
+        // Create matrix to pass in
+        let m = Matrix::mult_matrices(&scene.projection.get_matrix(), &camera.get_matrix());
 
         for chunk in 0..20 {
             let mut cur_buffer = if buffer_swap { *buffer_a } else { *buffer_b };
@@ -62,7 +73,7 @@ impl<P: Pusher> Renderer<P> {
 
             unsafe {
                 for &sprite in &scene.sprites {
-                    (*sprite).draw(&mut cur_buffer, cur_y);
+                    (*sprite).draw(&mut cur_buffer, cur_y, m);
                 }
             }
 

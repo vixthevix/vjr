@@ -9,7 +9,10 @@ use embedded_graphics_core::{
 
 use heapless::Vec;
 
-use crate::video::sprite::*;
+use crate::{
+    video::sprite::*,
+    matrix::projection::*,
+};
 
 /*
 Struct for holding pointers to Sprites for easy display. 
@@ -18,13 +21,15 @@ const SCENE_SPRITE_MAX: u16 = 64;
 pub struct Scene {
     pub sprites: Vec<*mut dyn Sprite, { SCENE_SPRITE_MAX as usize }>,
     pub bg_colour: RGB,
+    pub projection: Projection,
 }
 
 impl Scene {
-    pub fn new(bg_colour: RGB) -> Self {
+    pub fn new(bg_colour: RGB, projection: Projection) -> Self {
         Self {
             sprites: Vec::new(),
-            bg_colour
+            bg_colour,
+            projection,
         }
     }
     

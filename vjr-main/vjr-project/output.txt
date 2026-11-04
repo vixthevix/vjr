@@ -3,7 +3,7 @@ Crystal frequency: 40 MHz
 Flash size:        4MB
 Features:          WiFi, BT, Dual Core, 240MHz, VRef calibration in efuse, Coding Scheme None
 MAC address:       88:57:21:d6:06:30
-App/part. size:    550,544/4,128,768 bytes, 13.33%
+App/part. size:    568,816/4,128,768 bytes, 13.78%
 Commands:
     CTRL+R    Reset chip
     CTRL+C    Exit
@@ -31,34 +31,170 @@ I (53) boot:  0 nvs              WiFi data        01 02 00009000 00006000
 I (60) boot:  1 phy_init         RF data          01 01 0000f000 00001000
 I (67) boot:  2 factory          factory app      00 00 00010000 003f0000
 I (73) boot: End of partition table
-I (76) esp_image: segment 0: paddr=00010020 vaddr=3f400020 size=18440h ( 99392) map
-I (119) esp_image: segment 1: paddr=00028468 vaddr=3ffb0000 size=03d20h ( 15648) load
-I (126) esp_image: segment 2: paddr=0002c190 vaddr=40080000 size=03e88h ( 16008) load
-I (132) esp_image: segment 3: paddr=00030020 vaddr=400d0020 size=5b208h (373256) map
-I (266) esp_image: segment 4: paddr=0008b230 vaddr=40083e88 size=0b434h ( 46132) load
-I (293) boot: Loaded app from partition at offset 0x10000
-I (293) boot: Disabling RNG early entropy source...
+I (76) esp_image: segment 0: paddr=00010020 vaddr=3f400020 size=192e0h (103136) map
+I (121) esp_image: segment 1: paddr=00029308 vaddr=3ffb0000 size=03d20h ( 15648) load
+I (127) esp_image: segment 2: paddr=0002d030 vaddr=40080000 size=02fe8h ( 12264) load
+I (132) esp_image: segment 3: paddr=00030020 vaddr=400d0020 size=5eacch (387788) map
+I (271) esp_image: segment 4: paddr=0008eaf4 vaddr=40082fe8 size=0c2d4h ( 49876) load
+I (299) boot: Loaded app from partition at offset 0x10000
+I (299) boot: Disabling RNG early entropy source...
 [32mINFO - Embassy initialized![0m
 [32mINFO - Ngon {
     center: Coord2D {
-        x: 0,
-        y: 0,
+        x: 160,
+        y: 60,
     },
-    radius: 15,
+    radius: 45,
     vertices: [
-        Coord2D {
-            x: 14,
-            y: 0,
-        },
-        Coord2D {
-            x: -8,
-            y: 12,
-        },
-        Coord2D {
-            x: -8,
-            y: -13,
-        },
+        (
+            0.99975586,
+            0.0,
+        ),
+        (
+            0.9812012,
+            0.19335938,
+        ),
+        (
+            0.9250488,
+            0.38110352,
+        ),
+        (
+            0.8330078,
+            0.5541992,
+        ),
+        (
+            0.7092285,
+            0.70581055,
+        ),
+        (
+            0.55810547,
+            0.8305664,
+        ),
+        (
+            0.38549805,
+            0.9230957,
+        ),
+        (
+            0.19799805,
+            0.98046875,
+        ),
+        (
+            0.0029296875,
+            0.99975586,
+        ),
+        (
+            -0.19189453,
+            0.98095703,
+        ),
+        (
+            -0.37963867,
+            0.9243164,
+        ),
+        (
+            -0.5529785,
+            0.8322754,
+        ),
+        (
+            -0.704834,
+            0.7080078,
+        ),
+        (
+            -0.82958984,
+            0.5566406,
+        ),
+        (
+            -0.9226074,
+            0.3840332,
+        ),
+        (
+            -0.97998047,
+            0.1965332,
+        ),
+        (
+            -0.99975586,
+            0.0014648438,
+        ),
+        (
+            -0.9812012,
+            -0.19335938,
+        ),
+        (
+            -0.9250488,
+            -0.38110352,
+        ),
+        (
+            -0.8330078,
+            -0.5541992,
+        ),
+        (
+            -0.7092285,
+            -0.70581055,
+        ),
+        (
+            -0.55810547,
+            -0.8305664,
+        ),
+        (
+            -0.38549805,
+            -0.9230957,
+        ),
+        (
+            -0.19799805,
+            -0.98046875,
+        ),
+        (
+            -0.0029296875,
+            -0.99975586,
+        ),
+        (
+            0.19189453,
+            -0.98095703,
+        ),
+        (
+            0.37963867,
+            -0.9243164,
+        ),
+        (
+            0.5529785,
+            -0.8322754,
+        ),
+        (
+            0.704834,
+            -0.7080078,
+        ),
+        (
+            0.82958984,
+            -0.5566406,
+        ),
+        (
+            0.9226074,
+            -0.3840332,
+        ),
+        (
+            0.97998047,
+            -0.1965332,
+        ),
     ],
-    outline: Rgb565(r: 0, g: 0, b: 0),
-    fill: Rgb565(r: 0, g: 0, b: 0),
+    matrix: Matrix {
+        m: [
+            45.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            45.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            160.0,
+            60.0,
+            0.0,
+            1.0,
+        ],
+    },
+    outline: Rgb565(r: 31, g: 63, b: 31),
+    fill: Rgb565(r: 27, g: 5, b: 7),
 }[0m
