@@ -6,6 +6,9 @@ Base implementation of Matrices.
 use crate::trig::sine::{ sin };
 use crate::trig::cosine::{ cos };
 
+/*
+Enum for specifying axis to rotate about.
+*/
 #[derive(Clone, Copy)]
 pub enum Axis {
     X,
@@ -13,7 +16,7 @@ pub enum Axis {
     Z,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Debug)]
 pub struct Matrix {
     m:  [f32; 16],
 }
@@ -35,14 +38,6 @@ impl Matrix {
         }
     }
 
-    fn set(&mut self, index: usize, value: f32) {
-        self.m[index] = value;
-    }
-
-    fn get(&self, index: usize) -> f32 {
-        self.m[index]
-    }
-    
     pub fn mult_matrices(m1: &Self, m2: &Self) -> Self {
         let mut out = Self::identity();
         
@@ -73,9 +68,13 @@ impl Matrix {
     pub fn scale(&mut self, x: f32, y: f32, z: f32) {
         let mut t = Self::identity();
         
-        t.set(0,  x);
-        t.set(5,  y);
-        t.set(10, z);
+
+        t.m[0]  = x;
+        t.m[5]  = y;
+        t.m[10] = z;
+        // t.set(0,  x);
+        // t.set(5,  y);
+        // t.set(10, z);
     
         self.mult_by_matrix(&t);
     }
@@ -83,9 +82,12 @@ impl Matrix {
     pub fn translate(&mut self, x: isize, y: isize, z: isize) {
         let mut t = Self::identity();
         
-        t.set(12, x as f32);
-        t.set(13, y as f32);
-        t.set(14, z as f32);
+        // t.set(12, x as f32);
+        // t.set(13, y as f32);
+        // t.set(14, z as f32);
+        t.m[12] = x as f32;
+        t.m[13] = y as f32;
+        t.m[14] = z as f32;
     
         self.mult_by_matrix(&t);
     }
@@ -99,22 +101,22 @@ impl Matrix {
         
         match axis {
             Axis::X => {
-                t.set(5, cosine);
-                t.set(6, -sine);
-                t.set(9, sine);
-                t.set(10, cosine);
+                t.m[5]  = cosine;
+                t.m[6]  = -sine;
+                t.m[9]  = sine;
+                t.m[10] = cosine;
             },
             Axis::Y => {
-                t.set(0, cosine);
-                t.set(8, sine);
-                t.set(2, -sine);
-                t.set(10, cosine);
+                t.m[0]  = cosine;
+                t.m[8]  = sine;
+                t.m[2]  = -sine;
+                t.m[10] = cosine;
             },
             Axis::Z => {
-                t.set(0, cosine);
-                t.set(1, -sine);
-                t.set(4, sine);
-                t.set(5, cosine);
+                t.m[0]  = cosine;
+                t.m[1]  = -sine;
+                t.m[4]  = sine;
+                t.m[5] = cosine;
             }
         }
 

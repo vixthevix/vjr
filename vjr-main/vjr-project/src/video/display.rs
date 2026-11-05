@@ -59,8 +59,19 @@ use embedded_graphics_core::{
 
 extern crate alloc;
 
-// Macros 
+/*
+Container struct for pinout
+*/
+pub struct PinOut<'a> {
+    pub spi2: esp_hal::peripherals::SPI2  <'a>, 
+    pub mosi: esp_hal::peripherals::GPIO23<'a>,
+    pub sck : esp_hal::peripherals::GPIO18<'a>,
+    pub cs  : esp_hal::peripherals::GPIO15<'a>,
+    pub res : esp_hal::peripherals::GPIO4 <'a>,
+    pub dc  : esp_hal::peripherals::GPIO2 <'a>,
+}
 
+// Macro for initialising a PinOut from peripheral pins.
 #[macro_export]
 macro_rules! display_pinout_new {
     ($p:expr) => {
@@ -75,6 +86,9 @@ macro_rules! display_pinout_new {
     };
 }
 
+// Command buffer setup, required for SPI communication
+
+pub const DISPLAY_CMD_BUFFER_SIZE: usize = 16;
 
 #[macro_export]
 macro_rules! display_cmd_buffer_new {
@@ -89,7 +103,6 @@ macro_rules! display_cmd_buffer_init {
         $b.init([0_u8; DISPLAY_CMD_BUFFER_SIZE])
     }
 }
-
 
 // Enum for commands that can be communicated to the display with.
 // Datasheet used: https://cdn-shop.adafruit.com/datasheets/ILI9341.pdf
@@ -186,7 +199,6 @@ pub enum Command {
 }
 
 
-pub const DISPLAY_CMD_BUFFER_SIZE: usize = 16;
 
 // Type aliases for clear code
 pub type DisplaySpiBus<'a> = SpiDma<'a, esp_hal::Blocking>;
@@ -309,16 +321,4 @@ impl<'a> Display<'a> {
         // Memory write
         self.execute(Command::MemoryWrite, buffer);
     }
-}
-
-/*
-Container struct for pinout
-*/
-pub struct PinOut<'a> {
-    pub spi2: esp_hal::peripherals::SPI2  <'a>, 
-    pub mosi: esp_hal::peripherals::GPIO23<'a>,
-    pub sck : esp_hal::peripherals::GPIO18<'a>,
-    pub cs  : esp_hal::peripherals::GPIO15<'a>,
-    pub res : esp_hal::peripherals::GPIO4 <'a>,
-    pub dc  : esp_hal::peripherals::GPIO2 <'a>,
 }

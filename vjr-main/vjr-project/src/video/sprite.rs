@@ -6,9 +6,6 @@ BASIC SHAPES:
     Ngon
     Triangle
     Square
-
-Image sprite as well.
-
 */
 use embedded_graphics_core::{
     pixelcolor::{
@@ -42,7 +39,7 @@ Base trait for all sprites that can be drawn to the screen.
 */
 pub trait Sprite {
     // fn can_draw(&self, top_left: Coord2D, bottom_right: Coord2D);
-    fn draw(&self, buffer: & mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16, setup_matrix: Matrix);
+    fn draw(&self, buffer: & mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16, setup_matrix: &Matrix);
 }
 
 
@@ -79,7 +76,6 @@ impl Coord3D {
 /*
 Texture enum for deciding between colour and loaded image.
 */
-#[warn(dead_code)]
 enum Texture {
     Colour(RGB, RGB),
     Image, // Unsure what values to attach right now.
@@ -88,9 +84,7 @@ enum Texture {
 /*
 Ngon shape. A uniform shape with N vertices (Coord2D)
 */
-
 const N_MAX: u16 = 64;
-
 #[derive(Debug)]
 pub struct Ngon {
     center: Coord2D,
@@ -105,7 +99,8 @@ pub struct Ngon {
     vertices: Vec<(f32, f32), { N_MAX as usize }>,
 
     matrix: Matrix,
-
+    
+    // To be replaced by Texture enum
     outline: RGB,
     fill   : RGB,
 }
@@ -114,16 +109,13 @@ impl Ngon {
     pub fn new(n: u16, center: Coord2D, radius: u16) -> Self {
         // Impose a maximum Ngon n size
         assert!(n <= N_MAX);
-
-        // Temporarily store a max size vector, add only what we need, then cast to slice.
+        
         let mut vertices: Vec<(f32, f32), { N_MAX as usize }> = Vec::new(); 
-
+        
+        // Store vertices as floats for base, before matrix multiplications.
         for i in 0..n {
             let angle: usize = (ANGLE_360 * i as usize) / n as usize;
 
-            // let cur_x: isize = cos_mult(angle, radius.into()) as isize;
-            // let cur_y: isize = sin_mult(angle, radius.into()) as isize;
-            
             let cur_x = cos_mult(angle, 4096) as f32 / 4096.0;
             let cur_y = sin_mult(angle, 4096) as f32 / 4096.0;
 
@@ -207,7 +199,7 @@ impl Ngon {
 
 impl Sprite for Ngon {
     // Fill drawing
-    fn draw(&self, buffer: &mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16, setup_matrix: Matrix) {
+    fn draw(&self, buffer: &mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16, setup_matrix: &Matrix) {
         // Check bounds
         let x1: isize = 0;
         let y1: isize = y_offset as isize;
@@ -239,11 +231,10 @@ impl Sprite for Ngon {
         let screen_cy = ((1.0 - cy_t) * 0.5 * 240.0) as isize;
         let screen_center = Coord2D::new(screen_cx, screen_cy);
 
-        // We will be using Scanline Rasterization.
-        // Need each pair of close points, along with center of triangle.
         
-        // Fill draw
+        // Fill draw, with scanline rasterization
         for i in 0..self.vertices.len() {
+            // Grab current two points and center (3 points for triangle)
             let mut a = vertices[i];
             let mut b = vertices[(i + 1) % self.vertices.len()];
             let mut c = screen_center;
@@ -263,7 +254,7 @@ impl Sprite for Ngon {
             if a.y != b.y { // Bottom half is not horizontally flat
                 let segment_height = b.y - a.y; // From center line to bottom
                 
-                // Clamp y, to ensure lines existing in the current chunk are drawn only
+                // Clamp y to row buffer border
                 let y_start = a.y.max(y1);
                 let y_end   = b.y.min(y2);
 
@@ -274,7 +265,7 @@ impl Sprite for Ngon {
                     // Ensure x_min is smaller
                     if x_min > x_max { core::mem::swap(&mut x_min, &mut x_max) }
 
-                    // Clamp x
+                    // Clamp x to row buffer border
                     let x_start = x_min.max(x1);
                     let x_end   = x_max.min(x2);
 
@@ -297,7 +288,7 @@ impl Sprite for Ngon {
             if b.y != c.y { // Top half is not horizontally flat
                 let segment_height = c.y - b.y; // From center line to bottom
                 
-                // Clamp y, to ensure lines existing in the current chunk are drawn only
+                // Clamp y to row buffer border
                 let y_start = b.y.max(y1);
                 let y_end   = c.y.min(y2);
                 
@@ -313,7 +304,7 @@ impl Sprite for Ngon {
                         x_max = temp;
                     }
                     
-                    // Clamp x
+                    // Clamp x to row buffer border
                     let x_start = x_min.max(x1);
                     let x_end   = x_max.min(x2);
 
@@ -335,18 +326,20 @@ impl Sprite for Ngon {
             }
         }
         
-        // Outline draw
+        // Outline draw with Bresenham's algorithm
         for i in 0..self.vertices.len() {
+            // Grab current two vertices (with loop around)
             let p1 = vertices[i];
             let p2 = vertices[(i + 1) % self.vertices.len()];
             
+            // If both points (in the same row) out of scope, no line to be drawn
             if p1.y < y1 && p2.y < y1 || p1.y > y2 && p2.y > y2 { continue; }
 
             let mut ax = p1.x;
             let mut ay = p1.y;
             let mut bx = p2.x;
             let mut by = p2.y;
-            
+             
             let steep: bool = (ax - bx).abs() < (ay - by).abs();
             if steep {
                 // Swap x and y, for transpose
@@ -358,15 +351,17 @@ impl Sprite for Ngon {
                 core::mem::swap(&mut ax, &mut bx);
                 core::mem::swap(&mut ay, &mut by);
             }
-
-            let mut y = ay;
-            let mut ierror = 0;
+            
+            let mut y = ay;     // Start drawing at a
+            let mut ierror = 0; // Track pixel error to correct line direction
+            
             for x in ax..=bx {
                 
+                // Allow steepness to correct error
                 let x_t = if steep { y } else { x };
                 let y_t = if steep { x } else { y };
 
-                if x1 <= x_t && x_t < x2 && y1 <= y_t && y_t < y2 {
+                if x1 <= x_t && x_t < x2 && y1 <= y_t && y_t < y2 { // Inside row buffer
                     // We can draw here.
                     // x does not change, but y is offsetted back.
                     let px_x = x_t;
@@ -379,8 +374,10 @@ impl Sprite for Ngon {
                     buffer[index + 1] = outline[1];
                 }
                 
+                // Update integer error between y coordinates 
                 ierror += 2 * (by - ay).abs();
-
+                
+                // Branchless updates for y (adding/subtracting 1) and error (taking into account x)
                 y      += (if by > ay { 1 } else { -1 }) * (ierror > (bx - ax)) as isize;
                 ierror -= (2 * (bx - ax))                * (ierror > (bx - ax)) as isize;
             }
@@ -475,7 +472,6 @@ impl Triangle {
 Image sprite.
 Supports VIMG only for now.
 */
-
 pub struct Image {
     pub pos: Coord2D,
     pub width:  u16,

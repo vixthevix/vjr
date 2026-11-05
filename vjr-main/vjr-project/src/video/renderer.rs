@@ -58,7 +58,7 @@ impl<P: Pusher> Renderer<P> {
     pub fn draw_scene(&mut self, scene: &mut Scene, camera: &Camera) {
         let mut buffer_swap = true;
         
-        // Deconstruct self
+        // Deconstruct self to access mutable references
         let Self { buffer_a, buffer_b, pusher } = self;
         
         // Create matrix to pass in
@@ -68,17 +68,18 @@ impl<P: Pusher> Renderer<P> {
             let mut cur_buffer = if buffer_swap { *buffer_a } else { *buffer_b };
             let cur_y = (chunk * DISPLAY_BUFFER_HEIGHT) as u16;
             
-            // THIS LINE MUST BE FIXED
             Self::fill_bg(&mut cur_buffer, scene.bg_colour);
 
             unsafe {
                 for &sprite in &scene.sprites {
-                    (*sprite).draw(&mut cur_buffer, cur_y, m);
+                    (*sprite).draw(&mut cur_buffer, cur_y, &m);
                 }
             }
-
+            
+            // Draw pixels onto screen
             pusher.push(&cur_buffer, cur_y);
             
+            // Double buffering swap
             buffer_swap = !buffer_swap;
         }
     }
@@ -103,6 +104,5 @@ impl<P: Pusher> Renderer<P> {
 
         // Now we can safely all fill for the fastest filling possible.
         u16_buffer.fill(colour);
-
     }
 }

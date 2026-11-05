@@ -11,6 +11,10 @@ pub struct Projection {
 }
 
 impl Projection {
+    /*
+    Constructs a Projection for a 2D display.
+    Uses this algorithm: https://en.wikipedia.org/wiki/Orthographic_projection
+    */
     pub fn new_2D(depth: f32) -> Self {
 
         let left: f32 = 0.0;
@@ -40,7 +44,7 @@ impl Projection {
         }
     }
 
-    pub fn get_matrix(&self) -> Matrix {
-        self.matrix
+    pub fn get_matrix(&self) -> &Matrix {
+        &self.matrix
     }
 }

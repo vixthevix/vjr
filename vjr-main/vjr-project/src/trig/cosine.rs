@@ -1,4 +1,7 @@
-
+/*
+Fast cosine implementation
+cos is 90 degrees ahead of sin, so we can use the SINE_TABLE In the same way.
+*/
 
 use crate::trig::sine::*;
 

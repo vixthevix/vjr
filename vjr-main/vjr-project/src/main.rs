@@ -29,28 +29,31 @@ use embassy_futures::*;
 
 use static_cell::StaticCell;
 
-
-use crate::video::{
-    display::*,
-    sprite::*,
-    renderer::*,
-    pusher::*,
-    scene::*,
-};
-
-use crate::matrix::{
-    prelude::*,
-    camera::*,
-    projection::*,
-};
-
-use crate::trig::{
-    sine::*,
-};
-
+// vjr modules
 pub mod video;
 pub mod trig;
 pub mod matrix;
+
+// vjr crates
+use crate::{
+    video::{
+        display::*,
+        sprite::*,
+        renderer::*,
+        pusher::*,
+        scene::*,
+    },
+    matrix::{
+        prelude::*,
+        camera::*,
+        projection::*,
+    },
+    trig::{
+        sine::*,
+    },
+};
+
+
 
 extern crate alloc;
 
@@ -59,60 +62,46 @@ extern crate alloc;
 esp_bootloader_esp_idf::esp_app_desc!();
 
 /*
-Wrapper for messages sent across channels.
-This is standard for embedded channels.
+Example of wrapper for sending messages between async tasks.
 */
-#[warn(dead_code)]
-enum ChannelMessage {
-    Even(u16),
-    Odd(u16),
-}
+//enum ChannelMessage {
+//    Even(u16),
+//    Odd(u16),
+//}
 
-#[embassy_executor::task]
-async fn print_task() {
-    loop {
-        info!("Hello world!");
-        Timer::after(Duration::from_secs(1)).await;
-    }
-}
+/*
+Examples of async tasks, utilising wrapper messages
+*/
 
-#[embassy_executor::task] 
-async fn led_task(mut led: Output<'static>) -> ! {
-    loop {
-        led.toggle();
-        Timer::after(Duration::from_millis(500)).await;
-    }
-}
-
-#[embassy_executor::task]
-async fn tx_even_task(tx: Sender<'static, NoopRawMutex, ChannelMessage, 5>) -> ! {
-    let mut count: u16 = 0;
-    loop {
-        tx.send(ChannelMessage::Even(count)).await;
-        Timer::after(Duration::from_millis(500)).await;
-        count += 2;
-    }
-}
-#[embassy_executor::task]
-async fn tx_odd_task(tx: Sender<'static, NoopRawMutex, ChannelMessage, 5>) -> ! {
-    let mut count: u16 = 1;
-    loop {
-        tx.send(ChannelMessage::Odd(count)).await;
-        Timer::after(Duration::from_millis(1000)).await;
-        count += 2;
-    }
-}
-
-#[embassy_executor::task]
-async fn rx_task(rx: Receiver<'static, NoopRawMutex, ChannelMessage, 5>) -> ! {
-    loop {
-        let msg = rx.receive().await;
-        match msg {
-            ChannelMessage::Even(n) => info!("Even received: {n}"),
-            ChannelMessage::Odd(n)  => info!("Odd received: {n}"),
-        }
-    }
-}
+//#[embassy_executor::task]
+//async fn tx_even_task(tx: Sender<'static, NoopRawMutex, ChannelMessage, 5>) -> ! {
+//    let mut count: u16 = 0;
+//    loop {
+//        tx.send(ChannelMessage::Even(count)).await;
+//        Timer::after(Duration::from_millis(500)).await;
+//        count += 2;
+//    }
+//}
+//#[embassy_executor::task]
+//async fn tx_odd_task(tx: Sender<'static, NoopRawMutex, ChannelMessage, 5>) -> ! {
+//    let mut count: u16 = 1;
+//    loop {
+//        tx.send(ChannelMessage::Odd(count)).await;
+//        Timer::after(Duration::from_millis(1000)).await;
+//        count += 2;
+//    }
+//}
+//
+//#[embassy_executor::task]
+//async fn rx_task(rx: Receiver<'static, NoopRawMutex, ChannelMessage, 5>) -> ! {
+//    loop {
+//        let msg = rx.receive().await;
+//        match msg {
+//            ChannelMessage::Even(n) => info!("Even received: {n}"),
+//            ChannelMessage::Odd(n)  => info!("Odd received: {n}"),
+//        }
+//    }
+//}
 
 
 // Specific video buffer pusher for Home menu
@@ -139,12 +128,10 @@ impl<'a> HomePusher<'a> {
 }
 
 
-// Memory Pin for async task communication channel.
-static CHANNEL: StaticCell<Channel<NoopRawMutex, ChannelMessage, 5>> = StaticCell::new();
+// Example Memory Pin for async task communication channel.
+// static CHANNEL: StaticCell<Channel<NoopRawMutex, ChannelMessage, 5>> = StaticCell::new();
 
-// Static display buffers
-// display_buffer_new!(DISPLAY_BUFFER_A);
-// display_buffer_new!(DISPLAY_BUFFER_B);
+// Static display buffer for command.
 display_cmd_buffer_new!(DISPLAY_CMD_BUFFER);
 
 #[allow(
@@ -155,42 +142,43 @@ display_cmd_buffer_new!(DISPLAY_CMD_BUFFER);
 async fn main(spawner: Spawner) {
     // generator version: 1.4.0
     // generator parameters: -o esp32 -o unstable-hal -o embassy -o alloc -o wifi -o log -o neovim-classic -o vscode -o esp-backtrace -o esp
-
+    
+    // Initialise USB logger for communication with PC
     esp_println::logger::init_logger_from_env();
-
+    
+    // Set up ESP32 pins
     let config = esp_hal::Config::default().with_cpu_clock(CpuClock::max());
     let peripherals = esp_hal::init(config);
     
-
-    esp_alloc::heap_allocator!(#[esp_hal::ram(reclaimed)] size: 98768);
-
+    // Allocate a heap (unused)
+    // esp_alloc::heap_allocator!(#[esp_hal::ram(reclaimed)] size: 98768);
+    
+    // Initialise timer interrupt for async task switching
     let timg0 = TimerGroup::new(peripherals.TIMG0);
     esp_rtos::start(timg0.timer0, peripherals.FROM_CPU_INTR0);
 
     info!("Embassy initialized!");
-
-    let _wifi_controller =
-        esp_radio::wifi::WifiController::new(peripherals.WIFI, Default::default())
-            .expect("Failed to initialize Wi-Fi controller");
-    let _wifi_interface = esp_radio::wifi::Interface::station();
     
+    // Set up Wi-Fi (unused)
+    //let _wifi_controller =
+    //    esp_radio::wifi::WifiController::new(peripherals.WIFI, Default::default())
+    //        .expect("Failed to initialize Wi-Fi controller");
+    //let _wifi_interface = esp_radio::wifi::Interface::station();
+    
+    /*
+    Example code for setting up async tasks.
+    */
+
     // TODO: Spawn some tasks
     let _ = spawner;
-
-    // With Embassy, run two async tasks.
-    // Printing to serial, and blinking the LED. (DONE)
-    // Setting up a RX/TX channel between two tasks.
     
-    let _channel = CHANNEL.init(Channel::new());
+    // let _channel = CHANNEL.init(Channel::new());
 
-    let _rx = _channel.receiver();
-    let _tx = _channel.sender();
-    
-    let _tx_even = _tx.clone();
-    let _tx_odd  = _tx.clone();
-
-    // spawner.spawn(print_task() .unwrap());
-    // spawner.spawn(led_task(led).unwrap());
+    // let _rx = _channel.receiver();
+    // let _tx = _channel.sender();
+    //
+    // let _tx_even = _tx.clone();
+    // let _tx_odd  = _tx.clone();
     
     //spawner.spawn(tx_even_task(tx_even).unwrap());
     //spawner.spawn(tx_odd_task(tx_odd)  .unwrap());
@@ -205,31 +193,21 @@ async fn main(spawner: Spawner) {
     let pinout      = display_pinout_new!(peripherals);
     let cmd_buffer  = display_cmd_buffer_init!(DISPLAY_CMD_BUFFER);
     let dma_channel = peripherals.DMA_SPI2;
-
     let mut display = Display::new(pinout, dma_channel, cmd_buffer);
-
     
-    // All right, time for a proper BIOS
-    // Split into two sections: ROM Listener and Home Menu.
-    
-    // For Home Menu, we will need a Scene for graphics
-    
+    // Direct communication with screen
     let pusher = HomePusher::new(&mut display);
-
+    
     let mut renderer = Renderer::new(pusher);
     
     // Construct our projection and camera
     let projection = Projection::new_2D(1.0);
     let camera     = Camera::new(0, 0, 0);
-
+    
+    // Setup a scene
     let mut home_scene = Scene::new(Display::rgb(0, 0, 0), projection);
-
-    //let _triangle = Triangle::new_equilateral(Coord2D::new(160, 120), 10)
-    //    .with_outline(Display::rgb(135, 20, 45))
-    //    .with_fill(Display::rgb(30, 100, 200));
     
-    // home_scene.add(&mut triangle);
-    
+    // Setup some shapes
     let mut ngon = Ngon::new(32, Coord2D::new(160, 60), 45)
         .with_outline(Display::rgb(255, 255, 255))
         .with_fill(Display::rgb(220, 20, 60));
@@ -237,28 +215,28 @@ async fn main(spawner: Spawner) {
     let mut triangle = Ngon::new(3, Coord2D::new(40, 30), 20)
         .with_outline(Display::rgb(220, 20, 60)) 
         .with_fill(Display::rgb(255, 255, 255)); 
-
+    
+    // Add shapes to scene
     home_scene.add(&mut ngon);
     home_scene.add(&mut triangle);
 
     info!("{:#?}", ngon);
     
+    // Rotational data
     let angle = ANGLE_90 >> 4; // ~5 degrees
-    //let angle = ANGLE_90 >> 2; // ~20 degrees
-
     let pivot = Coord2D::new(160, 120);
     
     // Game ticker for 60 FPS
     let mut ticks = Ticker::every(Duration::from_hz(60));
-
+    
+    // Main loop
     loop {
         loop { // Home menu
             triangle.rotate_by(angle);
             ngon.rotate_around(pivot, angle);
             renderer.draw_scene(&mut home_scene, &camera);
             
-            yield_now().await;
-            // ticks.next().await;
+            ticks.next().await;
         }
         
 //        loop { // Background BIOS
@@ -267,9 +245,6 @@ async fn main(spawner: Spawner) {
     
         // Home button pressed signal received, returning to start of loop.
     }
-
-    
-
 
     // for inspiration have a look at the examples at https://github.com/esp-rs/esp-hal/tree/esp-hal-v1.2.2/examples
 }

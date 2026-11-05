@@ -1,0 +1,3 @@
+/*
+Fast arctan implementation.
+*/

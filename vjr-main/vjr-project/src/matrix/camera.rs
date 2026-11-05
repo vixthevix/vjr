@@ -14,6 +14,8 @@ pub struct Camera {
 impl Camera {
     pub fn new(x: isize, y: isize, z: isize) -> Self {
         let mut matrix = Matrix::identity();
+        
+        // Set in reverse direction, due to moving pixels in the opposite direction
         matrix.translate(-x, -y, -z);
 
         Self {
@@ -35,7 +37,7 @@ impl Camera {
         self.move_by(self.x - x, self.y - y, self.z - z);
     }
     
-    pub fn get_matrix(&self) -> Matrix {
-        self.matrix
+    pub fn get_matrix(&self) -> &Matrix {
+        &self.matrix
     }
 }

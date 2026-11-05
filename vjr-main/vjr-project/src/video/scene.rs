@@ -5,8 +5,6 @@ use embedded_graphics_core::{
     },
 };
 
-
-
 use heapless::Vec;
 
 use crate::{
@@ -34,7 +32,7 @@ impl Scene {
     }
     
     /*
-    Adds a Sprite to the Scene, and returns a handle (index) to that Sprite.
+    Adds a Sprite to the back of the Scene, and returns a handle (index) to that Sprite.
     */
     pub fn add(&mut self, sprite: *mut dyn Sprite) -> usize {
         let _ = self.sprites.push(sprite);
@@ -42,18 +40,21 @@ impl Scene {
         self.sprites.len() - 1
     }
     
+    // Adds a Sprite at an index
     pub fn add_at(&mut self, sprite: &'static mut dyn Sprite, index: usize) -> usize {
         let _ = self.sprites.insert(index, sprite as *mut dyn Sprite);
 
         index
     }
-
+    
+    // Removes Sprite from back of list and returns index
     pub fn pop(&mut self) -> u16 {
         self.sprites.pop();
 
         (self.sprites.len() - 1) as u16
     }
     
+    // Removes Sprite from list at index and returns index
     pub fn pop_at(&mut self, index: usize) -> usize {
         self.sprites.remove(index);
 
@@ -68,7 +69,8 @@ impl Scene {
 
         (b, a)
     }
-
+    
+    // Shift a Sprite down the list
     pub fn shift_down(&mut self, index: usize, count: usize) -> usize {
         
         let mut new_index = index;
@@ -80,6 +82,7 @@ impl Scene {
         new_index
     }
     
+    // Shift a Sprite up the list
     pub fn shift_up(&mut self, index: usize, count: usize) -> usize {
         
         let mut new_index = index;
