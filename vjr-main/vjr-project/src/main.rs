@@ -216,9 +216,18 @@ async fn main(spawner: Spawner) {
         .with_outline(Display::rgb(220, 20, 60)) 
         .with_fill(Display::rgb(255, 255, 255)); 
     
+    let mut long_triangle = Triangle::new(
+        Coord2D::new(25, 69),
+        Coord2D::new(75, 30),
+        Coord2D::new(30, 90)
+    )
+        .with_fill(Display::rgb(100, 30, 210))
+        .with_outline(Display::rgb(210, 30, 100));
+
     // Add shapes to scene
     home_scene.add(&mut ngon);
     home_scene.add(&mut triangle);
+    home_scene.add(&mut long_triangle);
 
     info!("{:#?}", ngon);
     

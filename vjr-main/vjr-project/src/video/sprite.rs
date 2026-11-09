@@ -39,7 +39,169 @@ Base trait for all sprites that can be drawn to the screen.
 */
 pub trait Sprite {
     // fn can_draw(&self, top_left: Coord2D, bottom_right: Coord2D);
-    fn draw(&self, buffer: & mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16, setup_matrix: &Matrix);
+    fn draw(&self, buffer: &mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16, setup_matrix: &Matrix);
+}
+
+/*
+Default function for drawing a line between two points, using Bresenham's algorithm
+*/
+fn line_draw(p1: Coord2D, p2: Coord2D, outline: &[u8; 2], buffer: &mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16) {
+    // Check bounds
+    let x1: isize = 0;
+    let y1: isize = y_offset as isize;
+    let x2: isize = DISPLAY_BUFFER_WIDTH as isize;
+    let y2: isize = y_offset as isize + DISPLAY_BUFFER_HEIGHT as isize;
+
+    // If both points (in the same row) out of scope, no line to be drawn
+    if p1.y < y1 && p2.y < y1 || p1.y > y2 && p2.y > y2 { return; }
+
+    let mut ax = p1.x;
+    let mut ay = p1.y;
+    let mut bx = p2.x;
+    let mut by = p2.y;
+     
+    let steep: bool = (ax - bx).abs() < (ay - by).abs();
+    if steep {
+        // Swap x and y, for transpose
+        core::mem::swap(&mut ax, &mut ay);
+        core::mem::swap(&mut bx, &mut by);
+    }
+
+    if ax > bx { // Make left to right
+        core::mem::swap(&mut ax, &mut bx);
+        core::mem::swap(&mut ay, &mut by);
+    }
+    
+    let mut y = ay;     // Start drawing at a
+    let mut ierror = 0; // Track pixel error to correct line direction
+    
+    for x in ax..=bx {
+        
+        // Allow steepness to correct error
+        let x_t = if steep { y } else { x };
+        let y_t = if steep { x } else { y };
+
+        if x1 <= x_t && x_t < x2 && y1 <= y_t && y_t < y2 { // Inside row buffer
+            // We can draw here.
+            // x does not change, but y is offsetted back.
+            let px_x = x_t;
+            let px_y = y_t - y_offset as isize;
+
+            // Buffer is 1D, and each px is two bytes.
+            let index: usize = ((px_x + (DISPLAY_BUFFER_WIDTH as isize * px_y)) * 2) as usize;
+
+            buffer[index]     = outline[0];
+            buffer[index + 1] = outline[1];
+        }
+        
+        // Update integer error between y coordinates 
+        ierror += 2 * (by - ay).abs();
+        
+        // Branchless updates for y (adding/subtracting 1) and error (taking into account x)
+        y      += (if by > ay { 1 } else { -1 }) * (ierror > (bx - ax)) as isize;
+        ierror -= (2 * (bx - ax))                * (ierror > (bx - ax)) as isize;
+    }
+}
+
+/*
+Default function for filling in a triangle
+*/
+fn triangle_fill(p1: Coord2D, p2: Coord2D, p3: Coord2D, fill: &[u8; 2], buffer: &mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16) {
+    // Check bounds
+    let x1: isize = 0;
+    let y1: isize = y_offset as isize;
+    let x2: isize = DISPLAY_BUFFER_WIDTH as isize;
+    let y2: isize = y_offset as isize + DISPLAY_BUFFER_HEIGHT as isize;
+
+    let mut a = p1;
+    let mut b = p2;
+    let mut c = p3;
+    
+    // If all points are out of range, we do not fill.
+    if a.y < y1 && b.y < y1 && c.y < y1 || a.y >= y2 && b.y >= y2 && c.y >= y2 { return; }
+    
+    // Sort vertices from highest to lowest based on y values.
+    if a.y > b.y { core::mem::swap(&mut a, &mut b); }
+    if a.y > c.y { core::mem::swap(&mut a, &mut c); }
+    if b.y > c.y { core::mem::swap(&mut b, &mut c); }
+
+    let total_height = c.y - a.y;
+    
+    // Focus on filling top and bottom segments (split by b)
+    
+    if a.y != b.y { // Bottom half is not horizontally flat
+        let segment_height = b.y - a.y; // From center line to bottom
+        
+        // Clamp y to row buffer border
+        let y_start = a.y.max(y1);
+        let y_end   = b.y.min(y2);
+
+        // Draw horizontal lines with each y
+        for y in y_start..y_end {
+            let mut x_min = a.x + ((c.x - a.x) * (y - a.y)) / total_height;   // a -> c line
+            let mut x_max = a.x + ((b.x - a.x) * (y - a.y)) / segment_height; // a -> b line 
+            // Ensure x_min is smaller
+            if x_min > x_max { core::mem::swap(&mut x_min, &mut x_max) }
+
+            // Clamp x to row buffer border
+            let x_start = x_min.max(x1);
+            let x_end   = x_max.min(x2);
+
+            // Perform draw
+            for x in x_start..x_end {
+                // We can draw here.
+                // x does not change, but y is offsetted back.
+                let px_x = x;
+                let px_y = y - y_offset as isize;
+
+                // Buffer is 1D, and each px is two bytes.
+                let index: usize = ((px_x + (DISPLAY_BUFFER_WIDTH as isize * px_y)) * 2) as usize;
+
+                buffer[index]     = fill[0];
+                buffer[index + 1] = fill[1];
+            }
+        }
+    }
+    
+    if b.y != c.y { // Top half is not horizontally flat
+        let segment_height = c.y - b.y; // From center line to bottom
+        
+        // Clamp y to row buffer border
+        let y_start = b.y.max(y1);
+        let y_end   = c.y.min(y2);
+        
+        // Draw horizontal lines with each y
+        for y in y_start..y_end {
+            let mut x_min = a.x + ((c.x - a.x) * (y - a.y)) / total_height;   // a -> c line
+            let mut x_max = b.x + ((c.x - b.x) * (y - b.y)) / segment_height; // a -> b line 
+            // Ensure x_min is smaller
+            if x_min > x_max { core::mem::swap(&mut x_min, &mut x_max) }
+            if x_min > x_max {
+                let temp = x_min;
+                x_min = x_max;
+                x_max = temp;
+            }
+            
+            // Clamp x to row buffer border
+            let x_start = x_min.max(x1);
+            let x_end   = x_max.min(x2);
+
+            // Perform draw
+            for x in x_start..x_end {
+                // We can draw here.
+                // x does not change, but y is offsetted back.
+                let px_x = x;
+                let px_y = y - y_offset as isize;
+
+                // Buffer is 1D, and each px is two bytes.
+                let index: usize = ((px_x + (DISPLAY_BUFFER_WIDTH as isize * px_y)) * 2) as usize;
+
+                // Draw outline for first and last point
+                buffer[index]     = fill[0];
+                buffer[index + 1] = fill[1];
+            }
+        }
+    }
 }
 
 
@@ -200,12 +362,6 @@ impl Ngon {
 impl Sprite for Ngon {
     // Fill drawing
     fn draw(&self, buffer: &mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16, setup_matrix: &Matrix) {
-        // Check bounds
-        let x1: isize = 0;
-        let y1: isize = y_offset as isize;
-        let x2: isize = DISPLAY_BUFFER_WIDTH as isize;
-        let y2: isize = y_offset as isize + DISPLAY_BUFFER_HEIGHT as isize;
-
         // RGB565 means each px is two bytes.
         let outline = RawU16::from(self.outline).into_inner().to_be_bytes();
         let fill    = RawU16::from(self.fill)   .into_inner().to_be_bytes();
@@ -238,92 +394,8 @@ impl Sprite for Ngon {
             let mut a = vertices[i];
             let mut b = vertices[(i + 1) % self.vertices.len()];
             let mut c = screen_center;
-            
-            // If all points are out of range, we do not fill.
-            if a.y < y1 && b.y < y1 && c.y < y1 || a.y >= y2 && b.y >= y2 && c.y >= y2 { continue; }
-            
-            // Sort vertices from highest to lowest based on y values.
-            if a.y > b.y { core::mem::swap(&mut a, &mut b); }
-            if a.y > c.y { core::mem::swap(&mut a, &mut c); }
-            if b.y > c.y { core::mem::swap(&mut b, &mut c); }
 
-            let total_height = c.y - a.y;
-            
-            // Focus on filling top and bottom segments (split by b)
-            
-            if a.y != b.y { // Bottom half is not horizontally flat
-                let segment_height = b.y - a.y; // From center line to bottom
-                
-                // Clamp y to row buffer border
-                let y_start = a.y.max(y1);
-                let y_end   = b.y.min(y2);
-
-                // Draw horizontal lines with each y
-                for y in y_start..y_end {
-                    let mut x_min = a.x + ((c.x - a.x) * (y - a.y)) / total_height;   // a -> c line
-                    let mut x_max = a.x + ((b.x - a.x) * (y - a.y)) / segment_height; // a -> b line 
-                    // Ensure x_min is smaller
-                    if x_min > x_max { core::mem::swap(&mut x_min, &mut x_max) }
-
-                    // Clamp x to row buffer border
-                    let x_start = x_min.max(x1);
-                    let x_end   = x_max.min(x2);
-
-                    // Perform draw
-                    for x in x_start..x_end {
-                        // We can draw here.
-                        // x does not change, but y is offsetted back.
-                        let px_x = x;
-                        let px_y = y - y_offset as isize;
-
-                        // Buffer is 1D, and each px is two bytes.
-                        let index: usize = ((px_x + (DISPLAY_BUFFER_WIDTH as isize * px_y)) * 2) as usize;
-
-                        buffer[index]     = fill[0];
-                        buffer[index + 1] = fill[1];
-                    }
-                }
-            }
-            
-            if b.y != c.y { // Top half is not horizontally flat
-                let segment_height = c.y - b.y; // From center line to bottom
-                
-                // Clamp y to row buffer border
-                let y_start = b.y.max(y1);
-                let y_end   = c.y.min(y2);
-                
-                // Draw horizontal lines with each y
-                for y in y_start..y_end {
-                    let mut x_min = a.x + ((c.x - a.x) * (y - a.y)) / total_height;   // a -> c line
-                    let mut x_max = b.x + ((c.x - b.x) * (y - b.y)) / segment_height; // a -> b line 
-                    // Ensure x_min is smaller
-                    if x_min > x_max { core::mem::swap(&mut x_min, &mut x_max) }
-                    if x_min > x_max {
-                        let temp = x_min;
-                        x_min = x_max;
-                        x_max = temp;
-                    }
-                    
-                    // Clamp x to row buffer border
-                    let x_start = x_min.max(x1);
-                    let x_end   = x_max.min(x2);
-
-                    // Perform draw
-                    for x in x_start..x_end {
-                        // We can draw here.
-                        // x does not change, but y is offsetted back.
-                        let px_x = x;
-                        let px_y = y - y_offset as isize;
-
-                        // Buffer is 1D, and each px is two bytes.
-                        let index: usize = ((px_x + (DISPLAY_BUFFER_WIDTH as isize * px_y)) * 2) as usize;
-
-                        // Draw outline for first and last point
-                        buffer[index]     = fill[0];
-                        buffer[index + 1] = fill[1];
-                    }
-                }
-            }
+            triangle_fill(a, b, c, &fill, buffer, y_offset);
         }
         
         // Outline draw with Bresenham's algorithm
@@ -332,56 +404,8 @@ impl Sprite for Ngon {
             let p1 = vertices[i];
             let p2 = vertices[(i + 1) % self.vertices.len()];
             
-            // If both points (in the same row) out of scope, no line to be drawn
-            if p1.y < y1 && p2.y < y1 || p1.y > y2 && p2.y > y2 { continue; }
-
-            let mut ax = p1.x;
-            let mut ay = p1.y;
-            let mut bx = p2.x;
-            let mut by = p2.y;
-             
-            let steep: bool = (ax - bx).abs() < (ay - by).abs();
-            if steep {
-                // Swap x and y, for transpose
-                core::mem::swap(&mut ax, &mut ay);
-                core::mem::swap(&mut bx, &mut by);
-            }
-
-            if ax > bx { // Make left to right
-                core::mem::swap(&mut ax, &mut bx);
-                core::mem::swap(&mut ay, &mut by);
-            }
-            
-            let mut y = ay;     // Start drawing at a
-            let mut ierror = 0; // Track pixel error to correct line direction
-            
-            for x in ax..=bx {
-                
-                // Allow steepness to correct error
-                let x_t = if steep { y } else { x };
-                let y_t = if steep { x } else { y };
-
-                if x1 <= x_t && x_t < x2 && y1 <= y_t && y_t < y2 { // Inside row buffer
-                    // We can draw here.
-                    // x does not change, but y is offsetted back.
-                    let px_x = x_t;
-                    let px_y = y_t - y_offset as isize;
-
-                    // Buffer is 1D, and each px is two bytes.
-                    let index: usize = ((px_x + (DISPLAY_BUFFER_WIDTH as isize * px_y)) * 2) as usize;
-
-                    buffer[index]     = outline[0];
-                    buffer[index + 1] = outline[1];
-                }
-                
-                // Update integer error between y coordinates 
-                ierror += 2 * (by - ay).abs();
-                
-                // Branchless updates for y (adding/subtracting 1) and error (taking into account x)
-                y      += (if by > ay { 1 } else { -1 }) * (ierror > (bx - ax)) as isize;
-                ierror -= (2 * (bx - ax))                * (ierror > (bx - ax)) as isize;
-            }
-        }        
+            line_draw(p1, p2, &outline, buffer, y_offset);
+        }
     }
 }
 
@@ -393,15 +417,15 @@ pub struct Triangle {
     p2: Coord2D,
     p3: Coord2D,
     
-    outline_colour: RGB,
-    fill_colour   : RGB,
+    outline: RGB,
+    fill   : RGB,
 }
 
 impl Triangle {
     // A triangle can be made in many different ways, so support them.
 
     pub fn new(p1: Coord2D, p2: Coord2D, p3: Coord2D) -> Self {
-        Self { p1, p2, p3 , outline_colour: RGB::BLACK, fill_colour: RGB::BLACK}
+        Self { p1, p2, p3 , outline: RGB::BLACK, fill: RGB::BLACK}
     }
 
     pub fn new_equilateral(center: Coord2D, radius: usize) -> Self {        
@@ -448,25 +472,40 @@ impl Triangle {
             y: original.y + center.y,
         };
 
-        Self { p1, p2, p3, outline_colour: RGB::BLACK, fill_colour: RGB::BLACK }
+        Self { p1, p2, p3, outline: RGB::BLACK, fill: RGB::BLACK }
     }
     
     // Chain constructor for other parts of triangle
     pub fn with_outline(self, colour: RGB) -> Self {
         Self {
-            outline_colour: colour,
+            outline: colour,
             ..self
         }
     }
 
     pub fn with_fill(self, colour: RGB) -> Self {
         Self {
-            fill_colour: colour,
+            fill: colour,
             ..self
         }
     }
 }
 
+impl Sprite for Triangle {
+    fn draw(&self, buffer: & mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16, setup_matrix: &Matrix) {
+        // Don't use setup_matrix for now, since coordinates are stored directly.
+
+        // RGB565 means each px is two bytes.
+        let outline = RawU16::from(self.outline).into_inner().to_be_bytes();
+        let fill    = RawU16::from(self.fill)   .into_inner().to_be_bytes();
+        
+        triangle_fill(self.p1, self.p2, self.p3, &fill, buffer, y_offset);
+
+        line_draw(self.p1, self.p2, &outline, buffer, y_offset);
+        line_draw(self.p2, self.p3, &outline, buffer, y_offset);
+        line_draw(self.p3, self.p1, &outline, buffer, y_offset);
+    }
+}
 
 /*
 Image sprite.

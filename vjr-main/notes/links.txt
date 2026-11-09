@@ -34,3 +34,6 @@ https://personal.math.ubc.ca/~wetton/talks/archimedes22.pdf
 
 // Arctan2 rules
 https://en.wikipedia.org/wiki/Atan2
+
+// My first ever guide for graphics programming, focusing on openGL
+https://openglbook.com/
