@@ -293,7 +293,7 @@ impl Ngon {
 
         // Initialise matrix
         let mut matrix = Matrix::identity();
-        matrix.translate(center.x, center.y, 0);
+        matrix.translate(center.x as f32, center.y as f32, 0.0);
         matrix.rotate(rotation, Axis::Z);
         matrix.scale(radius as f32, radius as f32, 1.0);
 
@@ -330,13 +330,13 @@ impl Ngon {
         
         if let Some(pivot) = self.orbit_pivot { // If orbiting
             // Encapsulate the transformation for an orbit
-            m.translate(pivot.x, pivot.y, 0);       // Set at the pivot
+            m.translate(pivot.x as f32, pivot.y as f32, 0.0);       // Set at the pivot
             m.rotate(self.orbit_rotation, Axis::Z); // Rotate around it
-            m.translate(-pivot.x, -pivot.y, 0);     // Set back to origin
+            m.translate(-pivot.x as f32, -pivot.y as f32, 0.0);     // Set back to origin
         }
 
         // Perform Translate Rotate Scale update
-        m.translate(self.center.x, self.center.y, 0);
+        m.translate(self.center.x as f32, self.center.y as f32, 0.0);
         m.rotate(self.rotation, Axis::Z);
         m.scale(self.radius as f32, self.radius as f32, 1.0);
 
@@ -413,19 +413,36 @@ impl Sprite for Ngon {
 Triangle shape.
 */
 pub struct Triangle {
-    p1: Coord2D,
-    p2: Coord2D,
-    p3: Coord2D,
     
+    // Change to floating point to apply matrix transformations to 
+    p1: (f32, f32),
+    p2: (f32, f32),
+    p3: (f32, f32),
+    
+    matrix: Matrix,
+
     outline: RGB,
     fill   : RGB,
 }
 
 impl Triangle {
     // A triangle can be made in many different ways, so support them.
-
     pub fn new(p1: Coord2D, p2: Coord2D, p3: Coord2D) -> Self {
-        Self { p1, p2, p3 , outline: RGB::BLACK, fill: RGB::BLACK}
+        // Normalize points, such that the centroid is (0, 0)
+        let centroid: (f32, f32) = (
+            (p1.x + p2.x + p3.x) as f32 / 3.0, 
+            (p1.y + p2.y + p3.y) as f32 / 3.0, 
+        );
+
+        let p1: (f32, f32) = (p1.x as f32 - centroid.0, p1.y as f32 - centroid.1);
+        let p2: (f32, f32) = (p2.x as f32 - centroid.0, p2.y as f32 - centroid.1);
+        let p3: (f32, f32) = (p3.x as f32 - centroid.0, p3.y as f32 - centroid.1);
+
+        // Set up matrix
+        let mut matrix: Matrix = Matrix::identity();
+        matrix.translate(centroid.0, centroid.1, 0.0);
+
+        Self { p1, p2, p3, matrix, outline: RGB::BLACK, fill: RGB::BLACK}
     }
 
     pub fn new_equilateral(center: Coord2D, radius: usize) -> Self {        
@@ -472,7 +489,22 @@ impl Triangle {
             y: original.y + center.y,
         };
 
-        Self { p1, p2, p3, outline: RGB::BLACK, fill: RGB::BLACK }
+        // With that, we can set up proper Triangle
+
+        let centroid: (f32, f32) = (
+            center.x as f32,
+            center.y as f32
+        );
+
+        let p1: (f32, f32) = (p1.x as f32 - centroid.0, p1.y as f32 - centroid.1);
+        let p2: (f32, f32) = (p2.x as f32 - centroid.0, p2.y as f32 - centroid.1);
+        let p3: (f32, f32) = (p3.x as f32 - centroid.0, p3.y as f32 - centroid.1);
+
+        // Set up matrix
+        let mut matrix: Matrix = Matrix::identity();
+        matrix.translate(centroid.0, centroid.1, 0.0);
+
+        Self { p1, p2, p3, matrix, outline: RGB::BLACK, fill: RGB::BLACK }
     }
     
     // Chain constructor for other parts of triangle
@@ -489,21 +521,44 @@ impl Triangle {
             ..self
         }
     }
+
+    // pub fn move_vertex_to(vertex, coord: Coord2D) {}
+    // pub fn move_vertex_by(vertex, coord: Coord2D) {}
 }
 
 impl Sprite for Triangle {
     fn draw(&self, buffer: & mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16, setup_matrix: &Matrix) {
-        // Don't use setup_matrix for now, since coordinates are stored directly.
+        // Pass points through matrix transformation
+        
+        let m = Matrix::mult_matrices(&setup_matrix, &self.matrix); 
+
+        let (x_t, y_t, _) = m.apply_to_vertex(self.p1.0, self.p1.1, 0.0);
+        // Mapped to [-1, 1], so return to ([0, 360], [0, 240])
+        let x: isize = ((x_t + 1.0) * 0.5 * 320.0) as isize; 
+        let y: isize = ((1.0 - y_t) * 0.5 * 240.0) as isize; // Grows downwards
+        let p1 = Coord2D::new(x, y);
+        
+        let (x_t, y_t, _) = m.apply_to_vertex(self.p2.0, self.p2.1, 0.0);
+        // Mapped to [-1, 1], so return to ([0, 360], [0, 240])
+        let x: isize = ((x_t + 1.0) * 0.5 * 320.0) as isize; 
+        let y: isize = ((1.0 - y_t) * 0.5 * 240.0) as isize; // Grows downwards
+        let p2 = Coord2D::new(x, y);
+
+        let (x_t, y_t, _) = m.apply_to_vertex(self.p3.0, self.p3.1, 0.0);
+        // Mapped to [-1, 1], so return to ([0, 360], [0, 240])
+        let x: isize = ((x_t + 1.0) * 0.5 * 320.0) as isize; 
+        let y: isize = ((1.0 - y_t) * 0.5 * 240.0) as isize; // Grows downwards
+        let p3 = Coord2D::new(x, y);
 
         // RGB565 means each px is two bytes.
         let outline = RawU16::from(self.outline).into_inner().to_be_bytes();
         let fill    = RawU16::from(self.fill)   .into_inner().to_be_bytes();
         
-        triangle_fill(self.p1, self.p2, self.p3, &fill, buffer, y_offset);
+        triangle_fill(p1, p2, p3, &fill, buffer, y_offset);
 
-        line_draw(self.p1, self.p2, &outline, buffer, y_offset);
-        line_draw(self.p2, self.p3, &outline, buffer, y_offset);
-        line_draw(self.p3, self.p1, &outline, buffer, y_offset);
+        line_draw(p1, p2, &outline, buffer, y_offset);
+        line_draw(p2, p3, &outline, buffer, y_offset);
+        line_draw(p3, p1, &outline, buffer, y_offset);
     }
 }
 

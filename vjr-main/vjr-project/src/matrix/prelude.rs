@@ -72,22 +72,16 @@ impl Matrix {
         t.m[0]  = x;
         t.m[5]  = y;
         t.m[10] = z;
-        // t.set(0,  x);
-        // t.set(5,  y);
-        // t.set(10, z);
     
         self.mult_by_matrix(&t);
     }
 
-    pub fn translate(&mut self, x: isize, y: isize, z: isize) {
+    pub fn translate(&mut self, x: f32, y: f32, z: f32) {
         let mut t = Self::identity();
         
-        // t.set(12, x as f32);
-        // t.set(13, y as f32);
-        // t.set(14, z as f32);
-        t.m[12] = x as f32;
-        t.m[13] = y as f32;
-        t.m[14] = z as f32;
+        t.m[12] = x;
+        t.m[13] = y;
+        t.m[14] = z;
     
         self.mult_by_matrix(&t);
     }

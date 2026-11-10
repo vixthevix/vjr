@@ -16,7 +16,7 @@ impl Camera {
         let mut matrix = Matrix::identity();
         
         // Set in reverse direction, due to moving pixels in the opposite direction
-        matrix.translate(-x, -y, -z);
+        matrix.translate(-x as f32, -y as f32, -z as f32);
 
         Self {
             matrix,
@@ -30,7 +30,7 @@ impl Camera {
         self.x += x_offset;
         self.y += y_offset;
         self.z += z_offset;
-        self.matrix.translate(-x_offset, -y_offset, -z_offset);
+        self.matrix.translate(-x_offset as f32, -y_offset as f32, -z_offset as f32);
     }
 
     pub fn move_to(&mut self, x: isize, y: isize, z: isize) {
