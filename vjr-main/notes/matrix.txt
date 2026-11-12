@@ -1,0 +1,43 @@
+#####################
+# WHAT IS A MATRIX? #
+#####################
+
+A matrix is a data structure belonging to the Linear Algebra branch of Mathematics. It consists of a table-like organization of numbers, N columns and M rows.
+
+For example, here is a 2x2 matrix:
+	
+	( 3  5 )
+	( 2  6 )
+
+Matrices are used alongside vectors (a type of matrix with only 1 column, representing coordinates) to transform them in determinstic ways. Transformations include:
+	- translation
+	- rotation
+	- scaling
+	- reflection
+
+By performing matrix multiplication, you can have a singular matrix represent a whole chain of transformations; this makes it very efficient to apply multiple transformations to a vector.
+
+
+########################
+# MATRICES IN GRAPHICS #
+########################
+
+Modern graphics kind of need matrices for displaying points, sort of.
+
+Like I said, matrices are very efficient, not only for transformations but for the general vertex transformation pipeline, which looks like this:
+
+	Orthographic projection matrix * View matrix * Sprite matrix
+
+The projection matrix defines the properties of the world, such as if it's 2D/3D, its "depth" (think FOV in Minecraft) and what kind of coordinates it uses.
+"Orthogographic" means all projection lines are perpendicular to the projection plane (used to determine what pixels are actually visible on screen and such). The opposite is oblique projection.
+
+The view matrix is essentially a Camera. It isn't technically required for the pipeline, unlike projection, but its very helpful for level scrolling and general manipulation of what you are looking at, without needing to alter the projection matrix. This becomes very apparent in 3D space, for instance controlling a Camera for a First Person View.
+
+The Sprite matrix (or more commonly object matrix) defines the transformations applied to a Sprite. 
+
+During Sprite rendering, each vertex passes through this whole pipeline (sounds like a long process but remember, matrices are efficient) and results in a new vertex that can be properly displayed on screen (or not, depending on if its outside the bounds of the screen and such).
+
+So yeah pretty important :p
+
+
+

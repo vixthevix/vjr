@@ -1,0 +1,39 @@
+######################
+# TEXTURES IN DETAIL #
+######################
+
+Mentioned in sprites.txt about UV coordinates, this will go into more detail.
+
+(COPIED OVER)
+
+A Texture is another word for, essentially, an imported image (in this case, a VIMG).
+
+Textures pose a problem because, unlike with solid colour filling, the ORIENTATION of the Texture matters.
+
+Say we have a Textured Square (which I will refer to as an Image). for a normal orientation, we can just copy
+over the VIMG pixels in. But when the Image is rotated, we expect the Texture to rotate as well.
+But instead, the Texture is drawn normally, and it looks weird.
+
+So, for a Texture, we need a notation of orientation. Generally, this is expressed using (U, V) coordinates for the
+Texture. Each vertex of your Sprite maps to a UV coordinate, and pixel reading is done from that UV coordinate, at
+the angle that the Sprite is currently at.
+
+Okay copy over.
+
+So, UV coordinates are usually stored as floats ranging from (0.0, 0.0) -> (1.0, 1.0).
+Since we are using integer rasterization (Bresenham's + scanline), it makes more sense to store UV coordinates in the rnage (0, 0) -> (IMG_WIDTH, IMG_HEIGHT).
+
+Much like with scanline, we will need to calculate a left and right value for U and V per vertex. These allow us to index into our Texture. However, because its not the same pixel every time (like with normal colours with one colour), we need to actually navigate our Texture by changing the current UV coordinate.
+
+We do this by calculating the change in value between min and max for U and V, over the change in x (scanline). We then add this onto our current U and V value.
+
+Something like that, the code will reflect this.
+
+
+#####################
+# MAPPING UV COORDS #
+#####################
+
+With a Quad, should be simple enough. map each corner to (0, 0), (IMG_WIDTH, 0), (0, IMG_HEIGHT), (IMG_WIDTH, IMG_HEIGHT).
+
+For Triangles and Ngons, no idea. And this extends towards all future Sprites as well maybe.

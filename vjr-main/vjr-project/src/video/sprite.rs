@@ -413,11 +413,13 @@ impl Sprite for Ngon {
 Triangle shape.
 */
 pub struct Triangle {
-    
     // Change to floating point to apply matrix transformations to 
     p1: (f32, f32),
     p2: (f32, f32),
     p3: (f32, f32),
+
+    // Store the current center of the triangle, for easy manipulation
+    centroid: (f32, f32),
     
     matrix: Matrix,
 
@@ -442,7 +444,7 @@ impl Triangle {
         let mut matrix: Matrix = Matrix::identity();
         matrix.translate(centroid.0, centroid.1, 0.0);
 
-        Self { p1, p2, p3, matrix, outline: RGB::BLACK, fill: RGB::BLACK}
+        Self { p1, p2, p3, centroid, matrix, outline: RGB::BLACK, fill: RGB::BLACK}
     }
 
     pub fn new_equilateral(center: Coord2D, radius: usize) -> Self {        
@@ -504,7 +506,7 @@ impl Triangle {
         let mut matrix: Matrix = Matrix::identity();
         matrix.translate(centroid.0, centroid.1, 0.0);
 
-        Self { p1, p2, p3, matrix, outline: RGB::BLACK, fill: RGB::BLACK }
+        Self { p1, p2, p3, centroid, matrix, outline: RGB::BLACK, fill: RGB::BLACK }
     }
     
     // Chain constructor for other parts of triangle
@@ -521,9 +523,66 @@ impl Triangle {
             ..self
         }
     }
+    
+    pub fn move_vertex_to(&mut self, vertex: u8, coord: Coord2D) {
+        // Get coordinates before centroid application
+        let mut p1 = (self.p1.0 + self.centroid.0, self.p1.1 + self.centroid.1);
+        let mut p2 = (self.p2.0 + self.centroid.0, self.p2.1 + self.centroid.1);
+        let mut p3 = (self.p3.0 + self.centroid.0, self.p3.1 + self.centroid.1);
 
-    // pub fn move_vertex_to(vertex, coord: Coord2D) {}
-    // pub fn move_vertex_by(vertex, coord: Coord2D) {}
+        // Apply coord to a chosen vertex
+        let coord = (coord.x as f32, coord.y as f32);
+        match vertex {
+            1 => p1 = coord,
+            2 => p2 = coord,
+            3 => p3 = coord,
+            _ => return,     // Add an error warning here or something
+        }
+        
+        // Recalculate centroid, points and matrix
+        self.centroid = (
+            (p1.0 + p2.0 + p3.0) as f32 / 3.0, 
+            (p1.1 + p2.1 + p3.1) as f32 / 3.0, 
+        );
+
+        self.p1 = (p1.0 as f32 - self.centroid.0, p1.1 as f32 - self.centroid.1);
+        self.p2 = (p2.0 as f32 - self.centroid.0, p2.1 as f32 - self.centroid.1);
+        self.p3 = (p3.0 as f32 - self.centroid.0, p3.1 as f32 - self.centroid.1);
+
+        // Set up matrix
+        self.matrix = Matrix::identity();
+        self.matrix.translate(self.centroid.0, self.centroid.1, 0.0);
+    }
+    
+    pub fn move_vertex_by(&mut self, vertex: u8, coord: Coord2D) {
+        // Get coordinates before centroid application
+        let mut p1 = (self.p1.0 + self.centroid.0, self.p1.1 + self.centroid.1);
+        let mut p2 = (self.p2.0 + self.centroid.0, self.p2.1 + self.centroid.1);
+        let mut p3 = (self.p3.0 + self.centroid.0, self.p3.1 + self.centroid.1);
+
+        // Apply coord to a chosen vertex
+        let coord = (coord.x as f32, coord.y as f32);
+        match vertex {
+            1 => p1 = (p1.0 + coord.0, p1.1 + coord.1),
+            2 => p2 = (p2.0 + coord.0, p2.1 + coord.1),
+            3 => p3 = (p3.0 + coord.0, p3.1 + coord.1),
+            _ => return,     // Add an error warning here or something
+        }
+        
+        // Recalculate centroid, points and matrix
+        self.centroid = (
+            (p1.0 + p2.0 + p3.0) as f32 / 3.0, 
+            (p1.1 + p2.1 + p3.1) as f32 / 3.0, 
+        );
+
+        self.p1 = (p1.0 as f32 - self.centroid.0, p1.1 as f32 - self.centroid.1);
+        self.p2 = (p2.0 as f32 - self.centroid.0, p2.1 as f32 - self.centroid.1);
+        self.p3 = (p3.0 as f32 - self.centroid.0, p3.1 as f32 - self.centroid.1);
+
+        // Set up matrix
+        self.matrix = Matrix::identity();
+        self.matrix.translate(self.centroid.0, self.centroid.1, 0.0);
+    }
 }
 
 impl Sprite for Triangle {
