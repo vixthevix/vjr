@@ -621,6 +621,139 @@ impl Sprite for Triangle {
     }
 }
 
+
+/*
+Quad(rilateral) sprite.
+*/
+pub struct Quad {
+    // Change to floating point to apply matrix transformations to 
+    p1: (f32, f32),
+    p2: (f32, f32),
+    p3: (f32, f32),
+    p4: (f32, f32),
+
+    // Store the current center of the quad, for easy manipulation
+    centroid: (f32, f32),
+
+    width: f32,
+    height: f32,
+    
+    matrix: Matrix,
+
+    outline: RGB,
+    fill   : RGB,
+}
+
+impl Quad {
+    pub fn new(center: Coord2D, width: usize, height: usize) -> Self {
+        // Normalize points, such that the centroid is (0, 0)
+        let centroid: (f32, f32) = (
+            center.x as f32,
+            center.y as f32,
+        );
+
+        // Calculate where each point should be, in a regular rectangle-like fashion
+        let width: f32 =  width as f32;
+        let height: f32 = height as f32;
+
+        // Center arround (0, 0) with side length 1
+        let p1: (f32, f32) = (0.5 ,  0.5);
+        let p2: (f32, f32) = (0.5 , -0.5);
+        let p3: (f32, f32) = (-0.5,  0.5);
+        let p4: (f32, f32) = (-0.5, -0.5);
+
+        // Set up matrix
+        let mut matrix: Matrix = Matrix::identity();
+        matrix.translate(centroid.0, centroid.1, 0.0);
+        matrix.scale(width, height, 1.0);
+
+        Self { p1, p2, p3, p4, centroid, width, height, matrix, outline: RGB::BLACK, fill: RGB::BLACK}
+    }
+
+    pub fn new_from_corners(p1: Coord2D, p2: Coord2D) -> Self {
+        let width:  f32 = (p1.x - p2.x).abs() as f32;
+        let height: f32 = (p1.y - p2.y).abs() as f32;
+
+        let centroid: (f32, f32) = (
+            (p1.x + p2.x) as f32 / 2.0,
+            (p1.y + p2.y) as f32 / 2.0,
+        );
+
+        // Center arround (0, 0) with side length 1
+        let p1: (f32, f32) = (0.5 ,  0.5);
+        let p2: (f32, f32) = (0.5 , -0.5);
+        let p3: (f32, f32) = (-0.5,  0.5);
+        let p4: (f32, f32) = (-0.5, -0.5);
+
+        // Set up matrix
+        let mut matrix: Matrix = Matrix::identity();
+        matrix.translate(centroid.0, centroid.1, 0.0);
+        matrix.scale(width, height, 1.0);
+
+        Self { p1, p2, p3, p4, centroid, width, height, matrix, outline: RGB::BLACK, fill: RGB::BLACK}
+    }
+
+    // Chain constructor for other parts of triangle
+    pub fn with_outline(self, colour: RGB) -> Self {
+        Self {
+            outline: colour,
+            ..self
+        }
+    }
+
+    pub fn with_fill(self, colour: RGB) -> Self {
+        Self {
+            fill: colour,
+            ..self
+        }
+    }
+}
+
+impl Sprite for Quad {
+    fn draw(&self, buffer: &mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16, setup_matrix: &Matrix) {
+        // Pass points through matrix transformation
+        
+        let m = Matrix::mult_matrices(&setup_matrix, &self.matrix); 
+
+        let (x_t, y_t, _) = m.apply_to_vertex(self.p1.0, self.p1.1, 0.0);
+        // Mapped to [-1, 1], so return to ([0, 360], [0, 240])
+        let x: isize = ((x_t + 1.0) * 0.5 * 320.0) as isize; 
+        let y: isize = ((1.0 - y_t) * 0.5 * 240.0) as isize; // Grows downwards
+        let p1 = Coord2D::new(x, y);
+        
+        let (x_t, y_t, _) = m.apply_to_vertex(self.p2.0, self.p2.1, 0.0);
+        // Mapped to [-1, 1], so return to ([0, 360], [0, 240])
+        let x: isize = ((x_t + 1.0) * 0.5 * 320.0) as isize; 
+        let y: isize = ((1.0 - y_t) * 0.5 * 240.0) as isize; // Grows downwards
+        let p2 = Coord2D::new(x, y);
+
+        let (x_t, y_t, _) = m.apply_to_vertex(self.p3.0, self.p3.1, 0.0);
+        // Mapped to [-1, 1], so return to ([0, 360], [0, 240])
+        let x: isize = ((x_t + 1.0) * 0.5 * 320.0) as isize; 
+        let y: isize = ((1.0 - y_t) * 0.5 * 240.0) as isize; // Grows downwards
+        let p3 = Coord2D::new(x, y);
+        
+        let (x_t, y_t, _) = m.apply_to_vertex(self.p4.0, self.p4.1, 0.0);
+        // Mapped to [-1, 1], so return to ([0, 360], [0, 240])
+        let x: isize = ((x_t + 1.0) * 0.5 * 320.0) as isize; 
+        let y: isize = ((1.0 - y_t) * 0.5 * 240.0) as isize; // Grows downwards
+        let p4 = Coord2D::new(x, y);
+
+        // RGB565 means each px is two bytes.
+        let outline = RawU16::from(self.outline).into_inner().to_be_bytes();
+        let fill    = RawU16::from(self.fill)   .into_inner().to_be_bytes();
+        
+        triangle_fill(p1, p2, p3, &fill, buffer, y_offset);
+        triangle_fill(p4, p2, p3, &fill, buffer, y_offset);
+        
+
+        line_draw(p1, p2, &outline, buffer, y_offset);
+        line_draw(p2, p4, &outline, buffer, y_offset);
+        line_draw(p4, p3, &outline, buffer, y_offset);
+        line_draw(p3, p1, &outline, buffer, y_offset);
+    }
+}
+
 /*
 Image sprite.
 Supports VIMG only for now.

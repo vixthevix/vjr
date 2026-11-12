@@ -216,18 +216,26 @@ async fn main(spawner: Spawner) {
         .with_outline(Display::rgb(220, 20, 60)) 
         .with_fill(Display::rgb(255, 255, 255)); 
     
+    // Proper triangle struct
+    let mut lt_moving_coord = Coord2D::new(75, 30);
     let mut long_triangle = Triangle::new(
+        lt_moving_coord,
         Coord2D::new(25, 69),
-        Coord2D::new(75, 30),
         Coord2D::new(30, 90)
     )
         .with_fill(Display::rgb(100, 30, 210))
         .with_outline(Display::rgb(210, 30, 100));
+    
+    // Proper quad struct
+    let mut quad = Quad::new(Coord2D::new(67, 67), 10, 100)
+        .with_fill(Display::rgb(45, 167, 1))
+        .with_outline(Display::rgb(100, 1, 240));
 
     // Add shapes to scene
     home_scene.add(&mut ngon);
     home_scene.add(&mut triangle);
     home_scene.add(&mut long_triangle);
+    home_scene.add(&mut quad);
 
     info!("{:#?}", ngon);
     
@@ -245,6 +253,9 @@ async fn main(spawner: Spawner) {
             ngon.rotate_around(pivot, angle);
             renderer.draw_scene(&mut home_scene, &camera);
             
+            lt_moving_coord.x = (lt_moving_coord.x + 5) % 100;
+            long_triangle.move_vertex_to(1, lt_moving_coord);
+
             ticks.next().await;
         }
         
