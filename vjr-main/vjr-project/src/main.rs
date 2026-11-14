@@ -209,12 +209,16 @@ async fn main(spawner: Spawner) {
     
     // Setup some shapes
     let mut ngon = Ngon::new(32, Coord2D::new(160, 60), 45)
-        .with_outline(Display::rgb(255, 255, 255))
-        .with_fill(Display::rgb(220, 20, 60));
+        .with_colour(
+            Display::rgb(220, 20, 60),
+            Display::rgb(255, 255, 255)
+        );
 
     let mut triangle = Ngon::new(3, Coord2D::new(40, 30), 20)
-        .with_outline(Display::rgb(220, 20, 60)) 
-        .with_fill(Display::rgb(255, 255, 255)); 
+        .with_colour(
+            Display::rgb(255, 255, 255),
+            Display::rgb(220, 20, 60) 
+        );
     
     // Proper triangle struct
     let mut lt_moving_coord = Coord2D::new(75, 30);
@@ -223,13 +227,17 @@ async fn main(spawner: Spawner) {
         Coord2D::new(25, 69),
         Coord2D::new(30, 90)
     )
-        .with_fill(Display::rgb(100, 30, 210))
-        .with_outline(Display::rgb(210, 30, 100));
+        .with_colour(
+            Display::rgb(100, 30, 210),
+            Display::rgb(210, 30, 100)
+        );
     
     // Proper quad struct
     let mut quad = Quad::new(Coord2D::new(67, 67), 10, 100)
-        .with_fill(Display::rgb(45, 167, 1))
-        .with_outline(Display::rgb(100, 1, 240));
+        .with_colour(
+            Display::rgb(45, 167, 1),
+            Display::rgb(100, 1, 240)
+        );
 
     // Add shapes to scene
     home_scene.add(&mut ngon);

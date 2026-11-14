@@ -238,6 +238,7 @@ impl Coord3D {
 /*
 Texture enum for deciding between colour and loaded image.
 */
+#[derive(Debug)]
 enum Texture {
     Colour(RGB, RGB),
     Image, // Unsure what values to attach right now.
@@ -262,9 +263,7 @@ pub struct Ngon {
 
     matrix: Matrix,
     
-    // To be replaced by Texture enum
-    outline: RGB,
-    fill   : RGB,
+    texture: Option<Texture>,
 }
 
 impl Ngon {
@@ -305,25 +304,17 @@ impl Ngon {
             orbit_rotation,
             vertices,
             matrix,
-            outline: RGB::BLACK,
-            fill   : RGB::BLACK,
-        }
-    }
-    
-    pub fn with_outline(self, colour: RGB) -> Self {
-        Self {
-            outline: colour,
-            ..self
+            texture: None, 
         }
     }
 
-    pub fn with_fill(self, colour: RGB) -> Self {
+    pub fn with_colour(self, fill: RGB, outline: RGB) -> Self {
         Self {
-            fill: colour,
+            texture: Some(Texture::Colour(fill, outline)),
             ..self
         }
     }
-    
+     
     // Updates matrix with stored information from scratch, prevents floating point math error 
     fn update_matrix(&mut self) {
         let mut m = Matrix::identity();
@@ -362,9 +353,6 @@ impl Ngon {
 impl Sprite for Ngon {
     // Fill drawing
     fn draw(&self, buffer: &mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16, setup_matrix: &Matrix) {
-        // RGB565 means each px is two bytes.
-        let outline = RawU16::from(self.outline).into_inner().to_be_bytes();
-        let fill    = RawU16::from(self.fill)   .into_inner().to_be_bytes();
         
         // We must apply our matrix transformations to our vertices.
         let m = Matrix::mult_matrices(&setup_matrix, &self.matrix); 
@@ -388,23 +376,33 @@ impl Sprite for Ngon {
         let screen_center = Coord2D::new(screen_cx, screen_cy);
 
         
-        // Fill draw, with scanline rasterization
-        for i in 0..self.vertices.len() {
-            // Grab current two points and center (3 points for triangle)
-            let mut a = vertices[i];
-            let mut b = vertices[(i + 1) % self.vertices.len()];
-            let mut c = screen_center;
+        // Draw, according to texture
+        match self.texture {
+            Some(Texture::Colour(fill, outline)) => {
+                // RGB565 means each px is two bytes.
+                let outline = RawU16::from(outline).into_inner().to_be_bytes();
+                let fill    = RawU16::from(fill)   .into_inner().to_be_bytes();
 
-            triangle_fill(a, b, c, &fill, buffer, y_offset);
-        }
-        
-        // Outline draw with Bresenham's algorithm
-        for i in 0..self.vertices.len() {
-            // Grab current two vertices (with loop around)
-            let p1 = vertices[i];
-            let p2 = vertices[(i + 1) % self.vertices.len()];
-            
-            line_draw(p1, p2, &outline, buffer, y_offset);
+                // Fill draw, with scanline rasterization
+                for i in 0..self.vertices.len() {
+                    // Grab current two points and center (3 points for triangle)
+                    let mut a = vertices[i];
+                    let mut b = vertices[(i + 1) % self.vertices.len()];
+                    let mut c = screen_center;
+
+                    triangle_fill(a, b, c, &fill, buffer, y_offset);
+                }
+                
+                // Outline draw with Bresenham's algorithm
+                for i in 0..self.vertices.len() {
+                    // Grab current two vertices (with loop around)
+                    let p1 = vertices[i];
+                    let p2 = vertices[(i + 1) % self.vertices.len()];
+                    
+                    line_draw(p1, p2, &outline, buffer, y_offset);
+                }
+            },
+            _ => panic!("Ngon texture not defined properly")
         }
     }
 }
@@ -423,8 +421,7 @@ pub struct Triangle {
     
     matrix: Matrix,
 
-    outline: RGB,
-    fill   : RGB,
+    texture: Option<Texture>,
 }
 
 impl Triangle {
@@ -444,7 +441,7 @@ impl Triangle {
         let mut matrix: Matrix = Matrix::identity();
         matrix.translate(centroid.0, centroid.1, 0.0);
 
-        Self { p1, p2, p3, centroid, matrix, outline: RGB::BLACK, fill: RGB::BLACK}
+        Self { p1, p2, p3, centroid, matrix, texture: None}
     }
 
     pub fn new_equilateral(center: Coord2D, radius: usize) -> Self {        
@@ -506,20 +503,12 @@ impl Triangle {
         let mut matrix: Matrix = Matrix::identity();
         matrix.translate(centroid.0, centroid.1, 0.0);
 
-        Self { p1, p2, p3, centroid, matrix, outline: RGB::BLACK, fill: RGB::BLACK }
+        Self { p1, p2, p3, centroid, matrix, texture: None }
     }
     
-    // Chain constructor for other parts of triangle
-    pub fn with_outline(self, colour: RGB) -> Self {
+    pub fn with_colour(self, fill: RGB, outline: RGB) -> Self {
         Self {
-            outline: colour,
-            ..self
-        }
-    }
-
-    pub fn with_fill(self, colour: RGB) -> Self {
-        Self {
-            fill: colour,
+            texture: Some(Texture::Colour(fill, outline)),
             ..self
         }
     }
@@ -608,16 +597,22 @@ impl Sprite for Triangle {
         let x: isize = ((x_t + 1.0) * 0.5 * 320.0) as isize; 
         let y: isize = ((1.0 - y_t) * 0.5 * 240.0) as isize; // Grows downwards
         let p3 = Coord2D::new(x, y);
-
-        // RGB565 means each px is two bytes.
-        let outline = RawU16::from(self.outline).into_inner().to_be_bytes();
-        let fill    = RawU16::from(self.fill)   .into_inner().to_be_bytes();
         
-        triangle_fill(p1, p2, p3, &fill, buffer, y_offset);
+        // Draw, according to texture
+        match self.texture {
+            Some(Texture::Colour(fill, outline)) => {
+                // RGB565 means each px is two bytes.
+                let outline = RawU16::from(outline).into_inner().to_be_bytes();
+                let fill    = RawU16::from(fill)   .into_inner().to_be_bytes();
 
-        line_draw(p1, p2, &outline, buffer, y_offset);
-        line_draw(p2, p3, &outline, buffer, y_offset);
-        line_draw(p3, p1, &outline, buffer, y_offset);
+                triangle_fill(p1, p2, p3, &fill, buffer, y_offset);
+
+                line_draw(p1, p2, &outline, buffer, y_offset);
+                line_draw(p2, p3, &outline, buffer, y_offset);
+                line_draw(p3, p1, &outline, buffer, y_offset);
+            },
+            _ => panic!("Triangle texture not defined properly")
+        }
     }
 }
 
@@ -639,9 +634,8 @@ pub struct Quad {
     height: f32,
     
     matrix: Matrix,
-
-    outline: RGB,
-    fill   : RGB,
+    
+    texture: Option<Texture>,
 }
 
 impl Quad {
@@ -667,7 +661,7 @@ impl Quad {
         matrix.translate(centroid.0, centroid.1, 0.0);
         matrix.scale(width, height, 1.0);
 
-        Self { p1, p2, p3, p4, centroid, width, height, matrix, outline: RGB::BLACK, fill: RGB::BLACK}
+        Self { p1, p2, p3, p4, centroid, width, height, matrix, texture: None }
     }
 
     pub fn new_from_corners(p1: Coord2D, p2: Coord2D) -> Self {
@@ -690,20 +684,12 @@ impl Quad {
         matrix.translate(centroid.0, centroid.1, 0.0);
         matrix.scale(width, height, 1.0);
 
-        Self { p1, p2, p3, p4, centroid, width, height, matrix, outline: RGB::BLACK, fill: RGB::BLACK}
+        Self { p1, p2, p3, p4, centroid, width, height, matrix, texture: None }
     }
-
-    // Chain constructor for other parts of triangle
-    pub fn with_outline(self, colour: RGB) -> Self {
+    
+    pub fn with_colour(self, fill: RGB, outline: RGB) -> Self {
         Self {
-            outline: colour,
-            ..self
-        }
-    }
-
-    pub fn with_fill(self, colour: RGB) -> Self {
-        Self {
-            fill: colour,
+            texture: Some(Texture::Colour(fill, outline)),
             ..self
         }
     }
@@ -738,19 +724,24 @@ impl Sprite for Quad {
         let x: isize = ((x_t + 1.0) * 0.5 * 320.0) as isize; 
         let y: isize = ((1.0 - y_t) * 0.5 * 240.0) as isize; // Grows downwards
         let p4 = Coord2D::new(x, y);
-
-        // RGB565 means each px is two bytes.
-        let outline = RawU16::from(self.outline).into_inner().to_be_bytes();
-        let fill    = RawU16::from(self.fill)   .into_inner().to_be_bytes();
         
-        triangle_fill(p1, p2, p3, &fill, buffer, y_offset);
-        triangle_fill(p4, p2, p3, &fill, buffer, y_offset);
-        
+        // Draw, according to texture
+        match self.texture {
+            Some(Texture::Colour(fill, outline)) => {
+                // RGB565 means each px is two bytes.
+                let outline = RawU16::from(outline).into_inner().to_be_bytes();
+                let fill    = RawU16::from(fill)   .into_inner().to_be_bytes();
+                
+                triangle_fill(p1, p2, p3, &fill, buffer, y_offset);
+                triangle_fill(p4, p2, p3, &fill, buffer, y_offset);
 
-        line_draw(p1, p2, &outline, buffer, y_offset);
-        line_draw(p2, p4, &outline, buffer, y_offset);
-        line_draw(p4, p3, &outline, buffer, y_offset);
-        line_draw(p3, p1, &outline, buffer, y_offset);
+                line_draw(p1, p2, &outline, buffer, y_offset);
+                line_draw(p2, p4, &outline, buffer, y_offset);
+                line_draw(p4, p3, &outline, buffer, y_offset);
+                line_draw(p3, p1, &outline, buffer, y_offset);
+            },
+            _ => panic!("Quad texture not defined properly")
+        }
     }
 }
 
