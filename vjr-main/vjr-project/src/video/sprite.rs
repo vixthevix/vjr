@@ -104,7 +104,7 @@ fn line_draw(p1: Coord2D, p2: Coord2D, outline: &[u8; 2], buffer: &mut [u8; DISP
 }
 
 /*
-Default function for filling in a triangle
+Default function for filling in a triangle with a colour
 */
 fn triangle_fill(p1: Coord2D, p2: Coord2D, p3: Coord2D, fill: &[u8; 2], buffer: &mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16) {
     // Check bounds
@@ -204,6 +204,195 @@ fn triangle_fill(p1: Coord2D, p2: Coord2D, p3: Coord2D, fill: &[u8; 2], buffer: 
     }
 }
 
+/*
+Default function for filling in a triangle with an image texture
+*/
+fn triangle_texture(p1: Coord2D, t1: (usize, usize), p2: Coord2D, t2: (usize, usize), p3: Coord2D, t3: (usize, usize), image: &Image, buffer: &mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16) {
+    // Check bounds
+    let x1: isize = 0;
+    let y1: isize = y_offset as isize;
+    let x2: isize = DISPLAY_BUFFER_WIDTH as isize;
+    let y2: isize = y_offset as isize + DISPLAY_BUFFER_HEIGHT as isize;
+    
+    // Cast texture coords to isize
+    let t1 = (t1.0 as isize, t1.1 as isize);
+    let t2 = (t2.0 as isize, t2.1 as isize);
+    let t3 = (t3.0 as isize, t3.1 as isize);
+
+    let mut a = (p1, t1);
+    let mut b = (p2, t2);
+    let mut c = (p3, t3);
+
+    // If all points are out of range, we do not fill.
+    if a.0.y < y1 && b.0.y < y1 && c.0.y < y1 || a.0.y >= y2 && b.0.y >= y2 && c.0.y >= y2 { return; }
+    
+    // Sort vertices from highest to lowest based on y values.
+    if a.0.y > b.0.y { core::mem::swap(&mut a, &mut b); }
+    if a.0.y > c.0.y { core::mem::swap(&mut a, &mut c); }
+    if b.0.y > c.0.y { core::mem::swap(&mut b, &mut c); }
+
+    let total_height = c.0.y - a.0.y;
+
+    // Get access to the texture
+    let texture = &image.data;
+    
+    // Focus on filling top and bottom segments (split by b)
+    
+    if a.0.y != b.0.y { // Bottom half is not horizontally flat
+        let segment_height = b.0.y - a.0.y; // From center line to bottom
+        
+        // Clamp y to row buffer border
+        let y_start = a.0.y.max(y1);
+        let y_end   = b.0.y.min(y2);
+
+        // Draw horizontal lines with each y
+        for y in y_start..y_end {
+            // Get coordinate and texture lines for each edge
+            let y_diff = y - a.0.y;
+
+            // a -> c line
+            let x_ac = a.0.x + ((c.0.x - a.0.x) * y_diff) / total_height;  
+            let u_ac = a.1.0 + ((c.1.0 - a.1.0) * y_diff) / total_height;
+            let v_ac = a.1.1 + ((c.1.1 - a.1.1) * y_diff) / total_height;
+            
+            // a -> b line
+            let x_ab = a.0.x + ((b.0.x - a.0.x) * y_diff) / segment_height;  
+            let u_ab = a.1.0 + ((b.1.0 - a.1.0) * y_diff) / segment_height;
+            let v_ab = a.1.1 + ((b.1.1 - a.1.1) * y_diff) / segment_height;
+        
+            
+            // Determine min and max
+            let (x_min, x_max, u_min, u_max, v_min, v_max) = if x_ac < x_ab {
+                (x_ac, x_ab, u_ac, u_ab, v_ac, v_ab)
+            }
+            else {
+                (x_ab, x_ac, u_ab, u_ac, v_ab, v_ac)
+            };
+            
+            // To navigate texture, calculate gradient of U and V lines with respect to x
+            // Since integer division, use bit shifting to account for errors
+            
+            let dx = x_max - x_min;
+
+            let du_dx = if dx > 0 { ((u_max - u_min) << 16) / dx } else { 0 };
+            let dv_dx = if dx > 0 { ((v_max - v_min) << 16) / dx } else { 0 };
+            
+            // UV trackers, incremented by d/dx, with shifting taken into account for correction
+            let mut u_cur = u_min << 16;
+            let mut v_cur = v_min << 16;
+            
+
+            // Clamp x to row buffer border
+            let x_start = x_min.max(x1);
+            let x_end   = x_max.min(x2);
+
+            // Perform draw
+            for x in x_start..x_end {
+                // Shift UV back to get actual coordinates
+                let tex_x = (u_cur >> 16) as usize;
+                let tex_y = (v_cur >> 16) as usize;
+                
+                // Clamp UV to image size
+                let tex_x = tex_x.min(image.width  as usize - 1);
+                let tex_y = tex_y.min(image.height as usize - 1);
+                
+                // Texture data is 1D, and each px is two bytes
+                let tex_index = (tex_x + (image.width as usize * tex_y)) * 2;
+
+                // x does not change, but y is offsetted back.
+                let px_x = x;
+                let px_y = y - y_offset as isize;
+
+                // Buffer is 1D, and each px is two bytes.
+                let index: usize = ((px_x + (DISPLAY_BUFFER_WIDTH as isize * px_y)) * 2) as usize;
+
+                buffer[index]     = texture[tex_index];
+                buffer[index + 1] = texture[tex_index + 1];
+
+                // Increment current UV
+                u_cur += du_dx;
+                v_cur += dv_dx;
+            }
+        }
+    }
+    
+    if b.0.y != c.0.y { // Top half is not horizontally flat
+        let segment_height = c.0.y - b.0.y; // From center line to bottom
+        
+        // Clamp y to row buffer border
+        let y_start = b.0.y.max(y1);
+        let y_end   = c.0.y.min(y2);
+        
+        // Draw horizontal lines with each y
+        for y in y_start..y_end {
+            // Get coordinate and texture lines for each edge
+
+            // a -> c line
+            let x_ac = a.0.x + ((c.0.x - a.0.x) * (y - a.0.y)) / total_height;  
+            let u_ac = a.1.0 + ((c.1.0 - a.1.0) * (y - a.0.y)) / total_height;
+            let v_ac = a.1.1 + ((c.1.1 - a.1.1) * (y - a.0.y)) / total_height;
+            
+            // b -> c line
+            let x_bc = b.0.x + ((c.0.x - b.0.x) * (y - b.0.y)) / segment_height;  
+            let u_bc = b.1.0 + ((c.1.0 - b.1.0) * (y - b.0.y)) / segment_height;
+            let v_bc = b.1.1 + ((c.1.1 - b.1.1) * (y - b.0.y)) / segment_height;
+        
+            
+            // Determine min and max
+            let (x_min, x_max, u_min, u_max, v_min, v_max) = if x_ac < x_bc {
+                (x_ac, x_bc, u_ac, u_bc, v_ac, v_bc)
+            }
+            else {
+                (x_bc, x_ac, u_bc, u_ac, v_bc, v_ac)
+            };
+            
+            // To navigate texture, calculate gradient of U and V lines with respect to x
+            // Since integer division, use bit shifting to account for errors
+            
+            let dx = x_max - x_min;
+
+            let du_dx = if dx > 0 { ((u_max - u_min) << 16) / dx } else { 0 };
+            let dv_dx = if dx > 0 { ((v_max - v_min) << 16) / dx } else { 0 };
+            
+            // UV trackers, incremented by d/dx, with shifting taken into account for correction
+            let mut u_cur = u_min << 16;
+            let mut v_cur = v_min << 16;
+            
+
+            // Clamp x to row buffer border
+            let x_start = x_min.max(x1);
+            let x_end   = x_max.min(x2);
+
+            // Perform draw
+            for x in x_start..x_end {
+                // Shift UV back to get actual coordinates
+                let tex_x = (u_cur >> 16) as usize;
+                let tex_y = (v_cur >> 16) as usize;
+                
+                // Clamp UV to image size
+                let tex_x = tex_x.min(image.width  as usize - 1);
+                let tex_y = tex_y.min(image.height as usize - 1);
+                
+                // Texture data is 1D, and each px is two bytes
+                let tex_index = (tex_x + (image.width as usize * tex_y)) * 2;
+
+                // x does not change, but y is offsetted back.
+                let px_x = x;
+                let px_y = y - y_offset as isize;
+
+                // Buffer is 1D, and each px is two bytes.
+                let index: usize = ((px_x + (DISPLAY_BUFFER_WIDTH as isize * px_y)) * 2) as usize;
+
+                buffer[index]     = texture[tex_index];
+                buffer[index + 1] = texture[tex_index + 1];
+
+                // Increment current UV
+                u_cur += du_dx;
+                v_cur += dv_dx;
+            }
+        }
+    }
+}
 
 /*
 2D Coordinate struct
@@ -236,12 +425,93 @@ impl Coord3D {
 }
 
 /*
+Private 2D vertex struct.
+Contains UV data.
+*/
+#[derive(Clone, Copy, Debug)]
+struct Vertex2D {
+    pub x: f32,
+    pub y: f32,
+
+    pub u: f32, 
+    pub v: f32,
+}
+
+impl Vertex2D {
+    pub fn new(x: f32, y: f32, u: f32, v: f32) -> Self {
+        Self { x, y, u, v }
+    } 
+}
+
+/*
+Image container struct.
+Stores references to data, along with metadata
+*/
+#[derive(Debug)]
+struct Image<'a> {
+    pub width:  u16,
+    pub height: u16,
+    pub compression: u8,
+    
+    pub meta: &'a [u8], // Metadata for compression and such.
+    pub data: &'a [u8], // Essentially, a reference to the image data in flash.
+
+}
+
+impl<'a> Image<'a> {
+    pub fn new(data: &'a [u8]) -> Self {
+        
+        // Read the data for the header and extract information from it.
+        
+        // Find 'VIMG' guard
+        let guard = &data[0..4];
+        if !(guard == b"VIMG") {
+            panic!("Invalid VIMG, starting guard not present");
+        }
+
+        // Compression type stored in 1 byte
+        let compression: u8 = data[4];
+
+        // Width and height store in 2 bytes each.
+        let width  = u16::from_be_bytes([data[5], data[6]]);
+        let height = u16::from_be_bytes([data[7], data[8]]);
+
+
+        // Copy over metadata about the VIMG
+        // Metadata ends once VIMG end guard reached.
+        let mut i: usize = 9;
+        loop {
+            let guard = &data[i..i+4];
+            if guard == b"VIMG" {
+                break;
+            }
+            i += 1;
+        }
+        
+        let meta: &'a [u8] = &data[9..i];
+
+        // i has start index of VIMG, so add 4
+        i += 4;
+        let raw_data: &'a [u8] = &data[i..];
+
+        Self {
+            width,
+            height,
+            compression,
+
+            meta,
+            data: raw_data,
+        }
+    }
+}
+
+/*
 Texture enum for deciding between colour and loaded image.
 */
 #[derive(Debug)]
-enum Texture {
+enum Texture<'a> {
     Colour(RGB, RGB),
-    Image, // Unsure what values to attach right now.
+    Image(Image<'a>), // Unsure what values to attach right now.
 }
 
 /*
@@ -249,7 +519,7 @@ Ngon shape. A uniform shape with N vertices (Coord2D)
 */
 const N_MAX: u16 = 64;
 #[derive(Debug)]
-pub struct Ngon {
+pub struct Ngon<'a> {
     center: Coord2D,
     radius: u16,
     rotation: usize,
@@ -259,19 +529,19 @@ pub struct Ngon {
     orbit_rotation: usize,         
 
     // To save storage, only include vertices and order them, rather than indices as well.
-    vertices: Vec<(f32, f32), { N_MAX as usize }>,
+    vertices: Vec<Vertex2D, { N_MAX as usize }>,
 
     matrix: Matrix,
     
-    texture: Option<Texture>,
+    texture: Option<Texture<'a>>,
 }
 
-impl Ngon {
+impl<'a> Ngon<'a> {
     pub fn new(n: u16, center: Coord2D, radius: u16) -> Self {
         // Impose a maximum Ngon n size
         assert!(n <= N_MAX);
         
-        let mut vertices: Vec<(f32, f32), { N_MAX as usize }> = Vec::new(); 
+        let mut vertices: Vec<Vertex2D, { N_MAX as usize }> = Vec::new(); 
         
         // Store vertices as floats for base, before matrix multiplications.
         for i in 0..n {
@@ -280,7 +550,7 @@ impl Ngon {
             let cur_x = cos_mult(angle, 4096) as f32 / 4096.0;
             let cur_y = sin_mult(angle, 4096) as f32 / 4096.0;
 
-            let _ = vertices.push((cur_x, cur_y));
+            let _ = vertices.push(Vertex2D::new(cur_x, cur_y, 0.0, 0.0));
         }
         
         // Default rotation
@@ -311,6 +581,23 @@ impl Ngon {
     pub fn with_colour(self, fill: RGB, outline: RGB) -> Self {
         Self {
             texture: Some(Texture::Colour(fill, outline)),
+            ..self
+        }
+    }
+
+    pub fn with_texture(mut self, data: &'a [u8]) -> Self {
+        // Wrap in Image and calculate UV coordinates
+        let image = Image::new(data);
+        
+        for vertex in self.vertices.iter_mut() {
+            // Base on x coordinates, already mapped to [-1, 1]
+            // So map to [0, 1]
+            vertex.u = (vertex.x + 1.0) * 0.5;
+            vertex.v = (vertex.y + 1.0) * 0.5;
+        }
+
+        Self {
+            texture: Some(Texture::Image(image)),
             ..self
         }
     }
@@ -350,7 +637,7 @@ impl Ngon {
 
 }
 
-impl Sprite for Ngon {
+impl<'a> Sprite for Ngon<'a> {
     // Fill drawing
     fn draw(&self, buffer: &mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16, setup_matrix: &Matrix) {
         
@@ -359,7 +646,7 @@ impl Sprite for Ngon {
         let mut vertices = [Coord2D { x: 0, y: 0 }; N_MAX as usize];
         let mut i = 0;
         for vertex in &self.vertices {
-            let (x_t, y_t, _) = m.apply_to_vertex(vertex.0, vertex.1, 0.0);
+            let (x_t, y_t, _) = m.apply_to_vertex(vertex.x, vertex.y, 0.0);
 
             // Mapped to [-1, 1], so return to ([0, 360], [0, 240])
             let x: isize = ((x_t + 1.0) * 0.5 * 320.0) as isize; 
@@ -377,8 +664,8 @@ impl Sprite for Ngon {
 
         
         // Draw, according to texture
-        match self.texture {
-            Some(Texture::Colour(fill, outline)) => {
+        match &self.texture {
+            &Some(Texture::Colour(fill, outline)) => {
                 // RGB565 means each px is two bytes.
                 let outline = RawU16::from(outline).into_inner().to_be_bytes();
                 let fill    = RawU16::from(fill)   .into_inner().to_be_bytes();
@@ -402,6 +689,36 @@ impl Sprite for Ngon {
                     line_draw(p1, p2, &outline, buffer, y_offset);
                 }
             },
+
+            Some(Texture::Image(image)) => {
+                // We need to normalise our UV values
+                let mut uv_values = [(0 as usize, 0 as usize); N_MAX as usize];
+                let mut i = 0;
+                for vertex in &self.vertices {
+                    let (u, v) = (vertex.u, vertex.v);
+                    // Mapped to [0.0, 1.0], so return to ([0, IMAGE_WIDTH], [0, IMAGE_HEIGHT])
+                    let u: usize = (u * image.width as f32) as usize; 
+                    let v: usize = (v * image.height as f32) as usize; 
+                    
+                    uv_values[i] = (u, v);
+                    i += 1;
+                }
+
+                // Fill draw, with scanline texture rasterization
+                for i in 0..self.vertices.len() {
+                    // Grab current two points and center (3 points for triangle)
+                    let mut a = vertices[i];
+                    let mut b = vertices[(i + 1) % self.vertices.len()];
+                    let mut c = screen_center;
+                    
+                    let mut a_tex = uv_values[i];
+                    let mut b_tex = uv_values[(i + 1) % self.vertices.len()];
+                    let mut c_tex = (image.width as usize / 2, image.height as usize / 2);
+
+                    triangle_texture(a, a_tex, b, b_tex, c, c_tex, &image, buffer, y_offset);
+                }
+
+            },
             _ => panic!("Ngon texture not defined properly")
         }
     }
@@ -410,7 +727,7 @@ impl Sprite for Ngon {
 /*
 Triangle shape.
 */
-pub struct Triangle {
+pub struct Triangle<'a> {
     // Change to floating point to apply matrix transformations to 
     p1: (f32, f32),
     p2: (f32, f32),
@@ -421,10 +738,10 @@ pub struct Triangle {
     
     matrix: Matrix,
 
-    texture: Option<Texture>,
+    texture: Option<Texture<'a>>,
 }
 
-impl Triangle {
+impl<'a> Triangle<'a> {
     // A triangle can be made in many different ways, so support them.
     pub fn new(p1: Coord2D, p2: Coord2D, p3: Coord2D) -> Self {
         // Normalize points, such that the centroid is (0, 0)
@@ -574,7 +891,7 @@ impl Triangle {
     }
 }
 
-impl Sprite for Triangle {
+impl<'a> Sprite for Triangle<'a> {
     fn draw(&self, buffer: & mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16, setup_matrix: &Matrix) {
         // Pass points through matrix transformation
         
@@ -620,7 +937,7 @@ impl Sprite for Triangle {
 /*
 Quad(rilateral) sprite.
 */
-pub struct Quad {
+pub struct Quad<'a> {
     // Change to floating point to apply matrix transformations to 
     p1: (f32, f32),
     p2: (f32, f32),
@@ -635,10 +952,10 @@ pub struct Quad {
     
     matrix: Matrix,
     
-    texture: Option<Texture>,
+    texture: Option<Texture<'a>>,
 }
 
-impl Quad {
+impl<'a> Quad<'a> {
     pub fn new(center: Coord2D, width: usize, height: usize) -> Self {
         // Normalize points, such that the centroid is (0, 0)
         let centroid: (f32, f32) = (
@@ -695,7 +1012,7 @@ impl Quad {
     }
 }
 
-impl Sprite for Quad {
+impl<'a> Sprite for Quad<'a> {
     fn draw(&self, buffer: &mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16, setup_matrix: &Matrix) {
         // Pass points through matrix transformation
         
@@ -745,65 +1062,3 @@ impl Sprite for Quad {
     }
 }
 
-/*
-Image sprite.
-Supports VIMG only for now.
-*/
-pub struct Image {
-    pub pos: Coord2D,
-    pub width:  u16,
-    pub height: u16,
-    pub compression: u8,
-    
-    pub meta: &'static [u8], // Metadata for compression and such.
-    pub data: &'static [u8], // Essentially, a reference to the image data in flash.
-
-}
-
-impl Image {
-    pub fn new(pos: Coord2D, data: &'static [u8]) -> Self {
-        
-        // Read the data for the header and extract information from it.
-        
-        // Find 'VIMG' guard
-        let guard = &data[0..4];
-        if !(guard == b"VIMG") {
-            panic!("Invalid VIMG, starting guard not present");
-        }
-
-        // Compression type stored in 1 byte
-        let compression: u8 = data[4];
-
-        // Width and height store in 2 bytes each.
-        let width  = u16::from_be_bytes([data[5], data[6]]);
-        let height = u16::from_be_bytes([data[7], data[8]]);
-
-
-        // Copy over metadata about the VIMG
-        // Metadata ends once VIMG end guard reached.
-        let mut i: usize = 9;
-        loop {
-            let guard = &data[i..i+4];
-            if guard == b"VIMG" {
-                break;
-            }
-            i += 1;
-        }
-        
-        let meta: &'static [u8] = &data[9..i];
-
-        // i has start index of VIMG, so add 4
-        i += 4;
-        let raw_data: &'static [u8] = &data[i..];
-
-        Self {
-            pos,
-            width,
-            height,
-            compression,
-
-            meta,
-            data: raw_data,
-        }
-    }
-}

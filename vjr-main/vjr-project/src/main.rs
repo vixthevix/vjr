@@ -134,6 +134,9 @@ impl<'a> HomePusher<'a> {
 // Static display buffer for command.
 display_cmd_buffer_new!(DISPLAY_CMD_BUFFER);
 
+const APPLE_VIMG: &[u8]    = include_bytes!("../images/appl.vimg");
+const GOLDSHIP_VIMG: &[u8] = include_bytes!("../images/goldship.vimg");
+
 #[allow(
     clippy::large_stack_frames,
     reason = "it's not unusual to allocate larger buffers etc. in main"
@@ -238,12 +241,21 @@ async fn main(spawner: Spawner) {
             Display::rgb(45, 167, 1),
             Display::rgb(100, 1, 240)
         );
+    
+    // Proper image displayed
+    let mut image = Ngon::new(4, Coord2D::new(200, 200), 20)
+        .with_texture(APPLE_VIMG);
+    
+    let mut circle_image = Ngon::new(32, Coord2D::new(100, 100), 50)
+        .with_texture(GOLDSHIP_VIMG);
 
     // Add shapes to scene
     home_scene.add(&mut ngon);
     home_scene.add(&mut triangle);
     home_scene.add(&mut long_triangle);
     home_scene.add(&mut quad);
+    home_scene.add(&mut image);
+    home_scene.add(&mut circle_image);
 
     info!("{:#?}", ngon);
     
