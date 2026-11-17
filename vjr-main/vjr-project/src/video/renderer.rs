@@ -1,4 +1,6 @@
 
+use embassy_futures::join::join;
+
 use embedded_graphics_core::{
     prelude::RawData,
     pixelcolor::{
@@ -55,7 +57,7 @@ impl<P: Pusher> Renderer<P> {
         }
     }
 
-    pub fn draw_scene(&mut self, scene: &mut Scene, camera: &Camera) {
+    pub async fn draw_scene(&mut self, scene: &mut Scene, camera: &Camera) {
         let mut buffer_swap = true;
         
         // Deconstruct self to access mutable references
@@ -63,25 +65,68 @@ impl<P: Pusher> Renderer<P> {
         
         // Create matrix to pass in
         let m = Matrix::mult_matrices(&scene.projection.get_matrix(), &camera.get_matrix());
-
-        for chunk in 0..20 {
-            let mut cur_buffer = if buffer_swap { *buffer_a } else { *buffer_b };
-            let cur_y = (chunk * DISPLAY_BUFFER_HEIGHT) as u16;
-            
-            Self::fill_bg(&mut cur_buffer, scene.bg_colour);
-
-            unsafe {
-                for &sprite in &scene.sprites {
-                    (*sprite).draw(&mut cur_buffer, cur_y, &m);
-                }
+        
+        // To perform simultaneous DMA pushing and CPU rendering,
+        // we can use embassy Joins with buffer A and B
+        
+        // First, prime the current buffer (A)
+        Self::fill_bg(buffer_a, scene.bg_colour);
+        unsafe {
+            for &sprite in &scene.sprites {
+                (*sprite).draw(buffer_a, 0, &m);
             }
+        }
+        
+        // Second, loop through alternating push and writes
+        // until penultimate chunk
+//        let mut read_buffer;
+//        let mut write_buffer;
+//        let mut read_y;
+//        let mut write_y;
+
+        for chunk in 1..15 {
+            // Prepare buffers and y coords dependant on swap
+            let read_y  = ((chunk - 1) * DISPLAY_BUFFER_HEIGHT) as u16;
+            let write_y = (chunk * DISPLAY_BUFFER_HEIGHT) as u16;
+
+            // Push and Write at the same time
             
-            // Draw pixels onto screen
-            pusher.push(&cur_buffer, cur_y);
+            match buffer_swap {
+                true => {
+                    join(
+                        pusher.push(buffer_a, read_y),
+                        async {
+                            Self::fill_bg(buffer_b, scene.bg_colour);
+                            unsafe {
+                                for &sprite in &scene.sprites {
+                                    (*sprite).draw(buffer_b, write_y, &m);
+                                }
+                            }
+                        }
+                    ).await;
+                },
+                false => {
+                    join(
+                        pusher.push(buffer_b, read_y),
+                        async {
+                            Self::fill_bg(buffer_a, scene.bg_colour);
+                            unsafe {
+                                for &sprite in &scene.sprites {
+                                    (*sprite).draw(buffer_a, write_y, &m);
+                                }
+                            }
+                        }
+                    ).await;
+                },
+            }
+
             
             // Double buffering swap
             buffer_swap = !buffer_swap;
         }
+
+        // Finally, push the final chunk just written
+        pusher.push(if buffer_swap { buffer_a } else { buffer_b }, (14 * DISPLAY_BUFFER_HEIGHT) as u16).await;
     }
     
     // General function for filling in a background colour

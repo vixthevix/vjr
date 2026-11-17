@@ -8,7 +8,7 @@
 #![deny(clippy::large_stack_frames)]
 
 use embassy_executor::Spawner;
-use embassy_time::{Duration, Timer, Ticker};
+use embassy_time::{Duration, Timer, Ticker, Instant};
 use esp_backtrace as _;
 use esp_hal::clock::CpuClock;
 use esp_hal::timer::timg::TimerGroup;
@@ -110,11 +110,11 @@ struct HomePusher<'a> {
 }
 
 impl<'a> Pusher for HomePusher<'a> {
-    fn push(&mut self, buffer: &[u8], y_offset: u16) {
+    async fn push(&mut self, buffer: &[u8], y_offset: u16) {
         // Use SPI DMA to bush buffer to display.
         unsafe {
             let display = self.display;
-            (*display).write_buffer(buffer, y_offset);
+            (*display).write_buffer(buffer, y_offset).await;
         }
     }
 } 
@@ -135,7 +135,7 @@ impl<'a> HomePusher<'a> {
 display_cmd_buffer_new!(DISPLAY_CMD_BUFFER);
 
 const APPLE_VIMG: &[u8]    = include_bytes!("../images/appl.vimg");
-//const GOLDSHIP_VIMG: &[u8] = include_bytes!("../images/goldship.vimg");
+// const GOLDSHIP_VIMG: &[u8] = include_bytes!("../images/goldship_optimized.vimg");
 const CSM_VIMG: &[u8] = include_bytes!("../images/csm_movie.vimg");
 
 #[allow(
@@ -206,7 +206,7 @@ async fn main(spawner: Spawner) {
     
     // Construct our projection and camera
     let projection = Projection::new_2D(1.0);
-    let camera     = Camera::new(0, 0, 0);
+    let camera     = Camera::new(0, 0, -50);
     
     // Setup a scene
     let mut home_scene = Scene::new(Display::rgb(0, 0, 0), projection);
@@ -244,7 +244,8 @@ async fn main(spawner: Spawner) {
         );
     
     // Proper image displayed
-    let mut image = Ngon::new(4, Coord2D::new(200, 200), 20)
+    let mut image = Quad::new(Coord2D::new(200, 200), 67, 67)
+        // .with_texture(GOLDSHIP_VIMG);
         .with_texture(APPLE_VIMG);
     
     let mut circle_image = Ngon::new(16, Coord2D::new(100, 100), 50)
@@ -269,20 +270,26 @@ async fn main(spawner: Spawner) {
     // Game ticker for 60 FPS
     let mut ticks = Ticker::every(Duration::from_hz(60));
     
+    // Used for measuring FPS
+    let mut timer = Instant::now();
+
     // Main loop
     loop {
         loop { // Home menu
             triangle.rotate_by(angle);
-            //ngon.rotate_around(pivot, angle);
+            ngon.rotate_around(pivot, angle);
             circle_image.rotate_around(pivot, counter_angle);
             circle_image.rotate_by(angle);
 
             lt_moving_coord.x = (lt_moving_coord.x + 5) % 300;
             long_triangle.move_vertex_to(1, lt_moving_coord);
             
-            renderer.draw_scene(&mut home_scene, &camera);
-
-            // ticks.next().await;
+            renderer.draw_scene(&mut home_scene, &camera).await;
+            
+            let fps = 1e6 as f32 / timer.elapsed().as_micros() as f32;
+            timer = Instant::now();
+            info!("FPS: {fps}");
+             ticks.next().await;
         }
         
 //        loop { // Background BIOS

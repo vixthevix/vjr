@@ -939,10 +939,10 @@ Quad(rilateral) sprite.
 */
 pub struct Quad<'a> {
     // Change to floating point to apply matrix transformations to 
-    p1: (f32, f32),
-    p2: (f32, f32),
-    p3: (f32, f32),
-    p4: (f32, f32),
+    p1: Vertex2D,
+    p2: Vertex2D,
+    p3: Vertex2D,
+    p4: Vertex2D,
 
     // Store the current center of the quad, for easy manipulation
     centroid: (f32, f32),
@@ -968,10 +968,20 @@ impl<'a> Quad<'a> {
         let height: f32 = height as f32;
 
         // Center arround (0, 0) with side length 1
-        let p1: (f32, f32) = (0.5 ,  0.5);
-        let p2: (f32, f32) = (0.5 , -0.5);
-        let p3: (f32, f32) = (-0.5,  0.5);
-        let p4: (f32, f32) = (-0.5, -0.5);
+        //
+        // p4      p2
+        //
+        // p3      p1
+        
+        //let p1: (f32, f32) = (0.5 ,  0.5);
+        //let p2: (f32, f32) = (0.5 , -0.5);
+        //let p3: (f32, f32) = (-0.5,  0.5);
+        //let p4: (f32, f32) = (-0.5, -0.5);
+
+        let p1: Vertex2D = Vertex2D::new(0.5 ,  0.5, 1.0, 1.0);
+        let p2: Vertex2D = Vertex2D::new(0.5 , -0.5, 1.0, 0.0);
+        let p3: Vertex2D = Vertex2D::new(-0.5,  0.5, 0.0, 1.0);
+        let p4: Vertex2D = Vertex2D::new(-0.5, -0.5, 0.0, 0.0);
 
         // Set up matrix
         let mut matrix: Matrix = Matrix::identity();
@@ -991,10 +1001,15 @@ impl<'a> Quad<'a> {
         );
 
         // Center arround (0, 0) with side length 1
-        let p1: (f32, f32) = (0.5 ,  0.5);
-        let p2: (f32, f32) = (0.5 , -0.5);
-        let p3: (f32, f32) = (-0.5,  0.5);
-        let p4: (f32, f32) = (-0.5, -0.5);
+        // let p1: (f32, f32) = (0.5 ,  0.5);
+        // let p2: (f32, f32) = (0.5 , -0.5);
+        // let p3: (f32, f32) = (-0.5,  0.5);
+        // let p4: (f32, f32) = (-0.5, -0.5);
+
+        let p1: Vertex2D = Vertex2D::new(0.5 ,  0.5, 1.0, 1.0);
+        let p2: Vertex2D = Vertex2D::new(0.5 , -0.5, 1.0, 0.0);
+        let p3: Vertex2D = Vertex2D::new(-0.5,  0.5, 0.0, 1.0);
+        let p4: Vertex2D = Vertex2D::new(-0.5, -0.5, 0.0, 0.0);
 
         // Set up matrix
         let mut matrix: Matrix = Matrix::identity();
@@ -1010,6 +1025,15 @@ impl<'a> Quad<'a> {
             ..self
         }
     }
+
+    pub fn with_texture(mut self, data: &'a [u8]) -> Self {
+        let image = Image::new(data);
+        Self {
+            texture: Some(Texture::Image(image)),
+            ..self
+        }
+    }
+
 }
 
 impl<'a> Sprite for Quad<'a> {
@@ -1018,33 +1042,33 @@ impl<'a> Sprite for Quad<'a> {
         
         let m = Matrix::mult_matrices(&setup_matrix, &self.matrix); 
 
-        let (x_t, y_t, _) = m.apply_to_vertex(self.p1.0, self.p1.1, 0.0);
+        let (x_t, y_t, _) = m.apply_to_vertex(self.p1.x, self.p1.y, 0.0);
         // Mapped to [-1, 1], so return to ([0, 360], [0, 240])
         let x: isize = ((x_t + 1.0) * 0.5 * 320.0) as isize; 
         let y: isize = ((1.0 - y_t) * 0.5 * 240.0) as isize; // Grows downwards
         let p1 = Coord2D::new(x, y);
         
-        let (x_t, y_t, _) = m.apply_to_vertex(self.p2.0, self.p2.1, 0.0);
+        let (x_t, y_t, _) = m.apply_to_vertex(self.p2.x, self.p2.y, 0.0);
         // Mapped to [-1, 1], so return to ([0, 360], [0, 240])
         let x: isize = ((x_t + 1.0) * 0.5 * 320.0) as isize; 
         let y: isize = ((1.0 - y_t) * 0.5 * 240.0) as isize; // Grows downwards
         let p2 = Coord2D::new(x, y);
 
-        let (x_t, y_t, _) = m.apply_to_vertex(self.p3.0, self.p3.1, 0.0);
+        let (x_t, y_t, _) = m.apply_to_vertex(self.p3.x, self.p3.y, 0.0);
         // Mapped to [-1, 1], so return to ([0, 360], [0, 240])
         let x: isize = ((x_t + 1.0) * 0.5 * 320.0) as isize; 
         let y: isize = ((1.0 - y_t) * 0.5 * 240.0) as isize; // Grows downwards
         let p3 = Coord2D::new(x, y);
         
-        let (x_t, y_t, _) = m.apply_to_vertex(self.p4.0, self.p4.1, 0.0);
+        let (x_t, y_t, _) = m.apply_to_vertex(self.p4.x, self.p4.y, 0.0);
         // Mapped to [-1, 1], so return to ([0, 360], [0, 240])
         let x: isize = ((x_t + 1.0) * 0.5 * 320.0) as isize; 
         let y: isize = ((1.0 - y_t) * 0.5 * 240.0) as isize; // Grows downwards
         let p4 = Coord2D::new(x, y);
         
         // Draw, according to texture
-        match self.texture {
-            Some(Texture::Colour(fill, outline)) => {
+        match &self.texture {
+            &Some(Texture::Colour(fill, outline)) => {
                 // RGB565 means each px is two bytes.
                 let outline = RawU16::from(outline).into_inner().to_be_bytes();
                 let fill    = RawU16::from(fill)   .into_inner().to_be_bytes();
@@ -1056,6 +1080,29 @@ impl<'a> Sprite for Quad<'a> {
                 line_draw(p2, p4, &outline, buffer, y_offset);
                 line_draw(p4, p3, &outline, buffer, y_offset);
                 line_draw(p3, p1, &outline, buffer, y_offset);
+            },
+
+            Some(Texture::Image(image)) => {
+                // We need to normalise our UV values
+                
+                let u = (self.p1.u * image.width as f32) as usize;
+                let v = (self.p1.v * image.height as f32) as usize;
+                let t1 = (u, v);
+
+                let u = (self.p2.u * image.width as f32) as usize;
+                let v = (self.p2.v * image.height as f32) as usize;
+                let t2 = (u, v);
+
+                let u = (self.p3.u * image.width as f32) as usize;
+                let v = (self.p3.v * image.height as f32) as usize;
+                let t3 = (u, v);
+
+                let u = (self.p4.u * image.width as f32) as usize;
+                let v = (self.p4.v * image.height as f32) as usize;
+                let t4 = (u, v);
+
+                triangle_texture(p1, t1, p2, t2, p3, t3, &image, buffer, y_offset);
+                triangle_texture(p4, t4, p2, t2, p3, t3, &image, buffer, y_offset);
             },
             _ => panic!("Quad texture not defined properly")
         }

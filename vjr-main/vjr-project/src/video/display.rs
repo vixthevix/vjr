@@ -19,6 +19,8 @@ use embedded_hal_bus::spi::{
     NoDelay,
 };
 
+use embedded_hal_async::spi::SpiDevice as AsyncSpiDevice;
+
 
 use esp_hal::{
     delay::Delay,
@@ -37,6 +39,8 @@ use esp_hal::{
         Mode as SpiMode,
     },
 };
+
+use core::future::Future;
 
 use mipidsi::{
     interface::SpiInterface,
@@ -201,7 +205,7 @@ pub enum Command {
 
 
 // Type aliases for clear code
-pub type DisplaySpiBus<'a> = SpiDma<'a, esp_hal::Blocking>;
+pub type DisplaySpiBus<'a> = SpiDma<'a, esp_hal::Async>;
 pub type DisplayCsPin <'a> = Output<'a>; 
 pub type DisplaySpiDev<'a> = ExclusiveDevice<DisplaySpiBus<'a>, DisplayCsPin<'a>, NoDelay>;
 pub type DisplayDcPin <'a> = Output<'a>;
@@ -240,7 +244,8 @@ impl<'a> Display<'a> {
         .unwrap()
         .with_sck(pinout.sck)
         .with_mosi(pinout.mosi)
-        .with_dma(dma_channel);
+        .with_dma(dma_channel)
+        .into_async();
 
         // Display specific pins
         let cs  = Output::new(pinout.cs , Level::Low, OutputConfig::default());
@@ -291,7 +296,7 @@ impl<'a> Display<'a> {
         self.data_mode.set_low(); // For safety
     }
 
-    pub fn write_buffer(&mut self, buffer: &[u8], y_offset: u16) {
+    pub async fn write_buffer(&mut self, buffer: &[u8], y_offset: u16) {
         // Define drawing region
         let x1: u16 = 0;
         let y1: u16 = y_offset;
