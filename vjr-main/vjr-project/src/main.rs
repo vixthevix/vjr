@@ -135,7 +135,8 @@ impl<'a> HomePusher<'a> {
 display_cmd_buffer_new!(DISPLAY_CMD_BUFFER);
 
 const APPLE_VIMG: &[u8]    = include_bytes!("../images/appl.vimg");
-const GOLDSHIP_VIMG: &[u8] = include_bytes!("../images/goldship.vimg");
+//const GOLDSHIP_VIMG: &[u8] = include_bytes!("../images/goldship.vimg");
+const CSM_VIMG: &[u8] = include_bytes!("../images/csm_movie.vimg");
 
 #[allow(
     clippy::large_stack_frames,
@@ -227,8 +228,8 @@ async fn main(spawner: Spawner) {
     let mut lt_moving_coord = Coord2D::new(75, 30);
     let mut long_triangle = Triangle::new(
         lt_moving_coord,
-        Coord2D::new(25, 69),
-        Coord2D::new(30, 90)
+        Coord2D::new(100, 69),
+        Coord2D::new(100, 90)
     )
         .with_colour(
             Display::rgb(100, 30, 210),
@@ -246,11 +247,12 @@ async fn main(spawner: Spawner) {
     let mut image = Ngon::new(4, Coord2D::new(200, 200), 20)
         .with_texture(APPLE_VIMG);
     
-    let mut circle_image = Ngon::new(32, Coord2D::new(100, 100), 50)
-        .with_texture(GOLDSHIP_VIMG);
+    let mut circle_image = Ngon::new(16, Coord2D::new(100, 100), 50)
+        //.with_texture(GOLDSHIP_VIMG);
+        .with_texture(CSM_VIMG);
 
     // Add shapes to scene
-    home_scene.add(&mut ngon);
+    // home_scene.add(&mut ngon);
     home_scene.add(&mut triangle);
     home_scene.add(&mut long_triangle);
     home_scene.add(&mut quad);
@@ -260,9 +262,10 @@ async fn main(spawner: Spawner) {
     info!("{:#?}", ngon);
     
     // Rotational data
-    let angle = ANGLE_90 >> 4; // ~5 degrees
+    let angle = ANGLE_90 >> 3; // ~10 degrees
+    let counter_angle = ANGLE_360 - (angle >> 2);
     let pivot = Coord2D::new(160, 120);
-    
+     
     // Game ticker for 60 FPS
     let mut ticks = Ticker::every(Duration::from_hz(60));
     
@@ -270,13 +273,16 @@ async fn main(spawner: Spawner) {
     loop {
         loop { // Home menu
             triangle.rotate_by(angle);
-            ngon.rotate_around(pivot, angle);
-            renderer.draw_scene(&mut home_scene, &camera);
-            
-            lt_moving_coord.x = (lt_moving_coord.x + 5) % 100;
-            long_triangle.move_vertex_to(1, lt_moving_coord);
+            //ngon.rotate_around(pivot, angle);
+            circle_image.rotate_around(pivot, counter_angle);
+            circle_image.rotate_by(angle);
 
-            ticks.next().await;
+            lt_moving_coord.x = (lt_moving_coord.x + 5) % 300;
+            long_triangle.move_vertex_to(1, lt_moving_coord);
+            
+            renderer.draw_scene(&mut home_scene, &camera);
+
+            // ticks.next().await;
         }
         
 //        loop { // Background BIOS

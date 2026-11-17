@@ -21,7 +21,7 @@ the angle that the Sprite is currently at.
 Okay copy over.
 
 So, UV coordinates are usually stored as floats ranging from (0.0, 0.0) -> (1.0, 1.0).
-Since we are using integer rasterization (Bresenham's + scanline), it makes more sense to store UV coordinates in the rnage (0, 0) -> (IMG_WIDTH, IMG_HEIGHT).
+Since we are using integer rasterization (Bresenham's + scanline), we store these coordinates as floats, and then perform a transformation per UV from [0.0, 1.0] to [0, IMAGE WIDTH/HEIGHT] 
 
 Much like with scanline, we will need to calculate a left and right value for U and V per vertex. These allow us to index into our Texture. However, because its not the same pixel every time (like with normal colours with one colour), we need to actually navigate our Texture by changing the current UV coordinate.
 
@@ -29,11 +29,15 @@ We do this by calculating the change in value between min and max for U and V, o
 
 Something like that, the code will reflect this.
 
+It should also be noted that transformations to a textured shape (scaling, rotation, translation) does not require changes to UV coordinates or anything like that. This is because the underlying texture rasterization uses the same
+rules as calculating the x values to draw between per y for filling a triangle. It kind of just works out that way.
 
 #####################
 # MAPPING UV COORDS #
 #####################
 
-With a Quad, should be simple enough. map each corner to (0, 0), (IMG_WIDTH, 0), (0, IMG_HEIGHT), (IMG_WIDTH, IMG_HEIGHT).
+With a Quad, should be simple enough. map each corner to (0, 0), (1, 0), (0, 1), (1, 1).
 
-For Triangles and Ngons, no idea. And this extends towards all future Sprites as well maybe.
+With Ngons, we use each XY coordinate as a reference. Since they are already stored in the range [-1, 1], we transform this to [0, 1] by adding 1 and halving. 
+
+For Triangles, no idea. 
