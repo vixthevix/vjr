@@ -38,7 +38,7 @@ use log::info;
 Base trait for all sprites that can be drawn to the screen.
 */
 pub trait Sprite {
-    fn gen_vertices(&self, setup_matrix: &Matrix) -> [(isize, isize, usize, usize); N_MAX as usize];
+    fn gen_vertices(&self, cache: &mut [(isize, isize, usize, usize); N_MAX as usize], setup_matrix: &Matrix);
     fn draw(&self, vertices: &[(isize, isize, usize, usize); N_MAX as usize], buffer: &mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16, setup_matrix: &Matrix);
 }
 
@@ -638,7 +638,7 @@ impl<'a> Ngon<'a> {
 }
 
 impl<'a> Sprite for Ngon<'a> {
-    fn gen_vertices(&self, setup_matrix: &Matrix) -> [(isize, isize, usize, usize); N_MAX as usize]{
+    fn gen_vertices(&self, cache: &mut [(isize, isize, usize, usize); N_MAX as usize], setup_matrix: &Matrix) {
         let m = Matrix::mult_matrices(&setup_matrix, &self.matrix); 
         let mut vertices = [(0 as isize, 0 as isize, 0 as usize, 0 as usize); N_MAX as usize];
         let mut i = 0;
@@ -655,14 +655,12 @@ impl<'a> Sprite for Ngon<'a> {
             if let Some(Texture::Image(image)) = &self.texture {
                 // Mapped to [0.0, 1.0], so return to ([0, IMAGE_WIDTH], [0, IMAGE_HEIGHT])
                 u = (vertex.u * image.width as f32) as usize; 
-                v = (vertex.y * image.height as f32) as usize; 
+                v = (vertex.v * image.height as f32) as usize; 
             }
             
-            vertices[i] = (x, y, u, v);
+            cache[i] = (x, y, u, v);
             i += 1;
         }
-
-        vertices
     }
 
     fn draw(&self, vertices: &[(isize, isize, usize, usize); N_MAX as usize], buffer: &mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16, setup_matrix: &Matrix) {
@@ -885,7 +883,7 @@ impl<'a> Triangle<'a> {
 }
 
 impl<'a> Sprite for Triangle<'a> {
-    fn gen_vertices(&self, setup_matrix: &Matrix) -> [(isize, isize, usize, usize); N_MAX as usize]{
+    fn gen_vertices(&self, cache: &mut [(isize, isize, usize, usize); N_MAX as usize], setup_matrix: &Matrix) {
         let m = Matrix::mult_matrices(&setup_matrix, &self.matrix); 
         let mut vertices = [(0 as isize, 0 as isize, 0 as usize, 0 as usize); N_MAX as usize];
         
@@ -907,11 +905,9 @@ impl<'a> Sprite for Triangle<'a> {
         let y: isize = ((1.0 - y_t) * 0.5 * 240.0) as isize; // Grows downwards
         let p3 = Coord2D::new(x, y);
         
-        vertices[0] = (p1.x, p1.y, 0, 0);
-        vertices[1] = (p2.x, p2.y, 0, 0);
-        vertices[2] = (p3.x, p3.y, 0, 0);
-
-        vertices
+        cache[0] = (p1.x, p1.y, 0, 0);
+        cache[1] = (p2.x, p2.y, 0, 0);
+        cache[2] = (p3.x, p3.y, 0, 0);
     }
 
     fn draw(&self, vertices: &[(isize, isize, usize, usize); N_MAX as usize], buffer: & mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16, setup_matrix: &Matrix) {
@@ -1046,7 +1042,7 @@ impl<'a> Quad<'a> {
 }
 
 impl<'a> Sprite for Quad<'a> {
-    fn gen_vertices(&self, setup_matrix: &Matrix) -> [(isize, isize, usize, usize); N_MAX as usize]{
+    fn gen_vertices(&self, cache: &mut [(isize, isize, usize, usize); N_MAX as usize], setup_matrix: &Matrix) {
         let m = Matrix::mult_matrices(&setup_matrix, &self.matrix); 
         let mut vertices = [(0 as isize, 0 as isize, 0 as usize, 0 as usize); N_MAX as usize];
         
@@ -1085,12 +1081,10 @@ impl<'a> Sprite for Quad<'a> {
             p4.3 = (self.p4.v * image.height as f32) as usize;
         }
         
-        vertices[0] = p1;
-        vertices[1] = p2;
-        vertices[2] = p3;
-        vertices[3] = p4;
-
-        vertices
+        cache[0] = p1;
+        cache[1] = p2;
+        cache[2] = p3;
+        cache[3] = p4;
     }
 
     fn draw(&self, vertices: &[(isize, isize, usize, usize); N_MAX as usize], buffer: &mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16, setup_matrix: &Matrix) {

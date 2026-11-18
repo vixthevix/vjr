@@ -77,7 +77,8 @@ impl<P: Pusher> Renderer<P> {
         let mut cache = [[(0 as isize, 0 as isize, 0 as usize, 0 as usize); sprite::N_MAX as usize]; SCENE_SPRITE_MAX as usize];
         unsafe {
             for (index, &sprite) in scene.sprites.iter().enumerate() {
-                cache[index] = (*sprite).gen_vertices(&m);
+                (*sprite).gen_vertices(&mut cache[index], &m);
+                // cache[index] = (*sprite).gen_vertices(&m);
             }
         }
         
@@ -107,7 +108,7 @@ impl<P: Pusher> Renderer<P> {
                             Self::fill_bg(buffer_b, scene.bg_colour);
                             unsafe {
                                 for (index, &sprite) in scene.sprites.iter().enumerate() {
-                                    (*sprite).draw(&cache[index], buffer_b, 0, &m);
+                                    (*sprite).draw(&cache[index], buffer_b, write_y, &m);
                                 }
                             }
                         }
@@ -120,7 +121,7 @@ impl<P: Pusher> Renderer<P> {
                             Self::fill_bg(buffer_a, scene.bg_colour);
                             unsafe {
                                 for (index, &sprite) in scene.sprites.iter().enumerate() {
-                                    (*sprite).draw(&cache[index], buffer_a, 0, &m);
+                                    (*sprite).draw(&cache[index], buffer_a, write_y, &m);
                                 }
                             }
                         }
