@@ -13,12 +13,15 @@ use crate::{
     video::{
         pusher::Pusher,
         scene::*,
+        sprite,
     },
     matrix::{
         camera::Camera,
         prelude::*,
     },
 };
+
+use heapless::Vec;
 
 pub const DISPLAY_BUFFER_SIZE: usize = 10240;
 
@@ -68,22 +71,27 @@ impl<P: Pusher> Renderer<P> {
         
         // To perform simultaneous DMA pushing and CPU rendering,
         // we can use embassy Joins with buffer A and B
-        
-        // First, prime the current buffer (A)
-        Self::fill_bg(buffer_a, scene.bg_colour);
+
+        // For each sprite in the scene, cache the vertex transformations.
+        // Since they are unchanged between chunk writes
+        let mut cache = [[(0 as isize, 0 as isize, 0 as usize, 0 as usize); sprite::N_MAX as usize]; SCENE_SPRITE_MAX as usize];
         unsafe {
-            for &sprite in &scene.sprites {
-                (*sprite).draw(buffer_a, 0, &m);
+            for (index, &sprite) in scene.sprites.iter().enumerate() {
+                cache[index] = (*sprite).gen_vertices(&m);
             }
         }
         
-        // Second, loop through alternating push and writes
-        // until penultimate chunk
-//        let mut read_buffer;
-//        let mut write_buffer;
-//        let mut read_y;
-//        let mut write_y;
 
+        // Prime the current buffer (A)
+        Self::fill_bg(buffer_a, scene.bg_colour);
+        unsafe {
+            for (index, &sprite) in scene.sprites.iter().enumerate() {
+                (*sprite).draw(&cache[index], buffer_a, 0, &m);
+            }
+        }
+        
+        // Loop through alternating push and writes
+        // until penultimate chunk
         for chunk in 1..15 {
             // Prepare buffers and y coords dependant on swap
             let read_y  = ((chunk - 1) * DISPLAY_BUFFER_HEIGHT) as u16;
@@ -98,8 +106,8 @@ impl<P: Pusher> Renderer<P> {
                         async {
                             Self::fill_bg(buffer_b, scene.bg_colour);
                             unsafe {
-                                for &sprite in &scene.sprites {
-                                    (*sprite).draw(buffer_b, write_y, &m);
+                                for (index, &sprite) in scene.sprites.iter().enumerate() {
+                                    (*sprite).draw(&cache[index], buffer_b, 0, &m);
                                 }
                             }
                         }
@@ -111,8 +119,8 @@ impl<P: Pusher> Renderer<P> {
                         async {
                             Self::fill_bg(buffer_a, scene.bg_colour);
                             unsafe {
-                                for &sprite in &scene.sprites {
-                                    (*sprite).draw(buffer_a, write_y, &m);
+                                for (index, &sprite) in scene.sprites.iter().enumerate() {
+                                    (*sprite).draw(&cache[index], buffer_a, 0, &m);
                                 }
                             }
                         }

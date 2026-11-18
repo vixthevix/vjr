@@ -38,14 +38,14 @@ use log::info;
 Base trait for all sprites that can be drawn to the screen.
 */
 pub trait Sprite {
-    // fn can_draw(&self, top_left: Coord2D, bottom_right: Coord2D);
-    fn draw(&self, buffer: &mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16, setup_matrix: &Matrix);
+    fn gen_vertices(&self, setup_matrix: &Matrix) -> [(isize, isize, usize, usize); N_MAX as usize];
+    fn draw(&self, vertices: &[(isize, isize, usize, usize); N_MAX as usize], buffer: &mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16, setup_matrix: &Matrix);
 }
 
 /*
 Default function for drawing a line between two points, using Bresenham's algorithm
 */
-fn line_draw(p1: Coord2D, p2: Coord2D, outline: &[u8; 2], buffer: &mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16) {
+fn line_draw(p1: (isize, isize), p2: (isize, isize), outline: &[u8; 2], buffer: &mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16) {
     // Check bounds
     let x1: isize = 0;
     let y1: isize = y_offset as isize;
@@ -53,12 +53,12 @@ fn line_draw(p1: Coord2D, p2: Coord2D, outline: &[u8; 2], buffer: &mut [u8; DISP
     let y2: isize = y_offset as isize + DISPLAY_BUFFER_HEIGHT as isize;
 
     // If both points (in the same row) out of scope, no line to be drawn
-    if p1.y < y1 && p2.y < y1 || p1.y > y2 && p2.y > y2 { return; }
+    if p1.1 < y1 && p2.1 < y1 || p1.1 > y2 && p2.1 > y2 { return; }
 
-    let mut ax = p1.x;
-    let mut ay = p1.y;
-    let mut bx = p2.x;
-    let mut by = p2.y;
+    let mut ax = p1.0;
+    let mut ay = p1.1;
+    let mut bx = p2.0;
+    let mut by = p2.1;
      
     let steep: bool = (ax - bx).abs() < (ay - by).abs();
     if steep {
@@ -106,16 +106,16 @@ fn line_draw(p1: Coord2D, p2: Coord2D, outline: &[u8; 2], buffer: &mut [u8; DISP
 /*
 Default function for filling in a triangle with a colour
 */
-fn triangle_fill(p1: Coord2D, p2: Coord2D, p3: Coord2D, fill: &[u8; 2], buffer: &mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16) {
+fn triangle_fill(p1: (isize, isize), p2: (isize, isize), p3: (isize, isize), fill: &[u8; 2], buffer: &mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16) {
     // Check bounds
     let x1: isize = 0;
     let y1: isize = y_offset as isize;
     let x2: isize = DISPLAY_BUFFER_WIDTH as isize;
     let y2: isize = y_offset as isize + DISPLAY_BUFFER_HEIGHT as isize;
 
-    let mut a = p1;
-    let mut b = p2;
-    let mut c = p3;
+    let mut a = Coord2D::new(p1.0, p1.1);
+    let mut b = Coord2D::new(p2.0, p2.1);
+    let mut c = Coord2D::new(p3.0, p3.1);
     
     // If all points are out of range, we do not fill.
     if a.y < y1 && b.y < y1 && c.y < y1 || a.y >= y2 && b.y >= y2 && c.y >= y2 { return; }
@@ -207,7 +207,7 @@ fn triangle_fill(p1: Coord2D, p2: Coord2D, p3: Coord2D, fill: &[u8; 2], buffer: 
 /*
 Default function for filling in a triangle with an image texture
 */
-fn triangle_texture(p1: Coord2D, t1: (usize, usize), p2: Coord2D, t2: (usize, usize), p3: Coord2D, t3: (usize, usize), image: &Image, buffer: &mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16) {
+fn triangle_texture(p1: (isize, isize, usize, usize), p2: (isize, isize, usize, usize), p3: (isize, isize, usize, usize), image: &Image, buffer: &mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16) {
     // Check bounds
     let x1: isize = 0;
     let y1: isize = y_offset as isize;
@@ -215,13 +215,13 @@ fn triangle_texture(p1: Coord2D, t1: (usize, usize), p2: Coord2D, t2: (usize, us
     let y2: isize = y_offset as isize + DISPLAY_BUFFER_HEIGHT as isize;
     
     // Cast texture coords to isize
-    let t1 = (t1.0 as isize, t1.1 as isize);
-    let t2 = (t2.0 as isize, t2.1 as isize);
-    let t3 = (t3.0 as isize, t3.1 as isize);
+    let t1 = (p1.2 as isize, p1.3 as isize);
+    let t2 = (p2.2 as isize, p2.3 as isize);
+    let t3 = (p3.2 as isize, p3.3 as isize);
 
-    let mut a = (p1, t1);
-    let mut b = (p2, t2);
-    let mut c = (p3, t3);
+    let mut a = (Coord2D::new(p1.0, p1.1), t1);
+    let mut b = (Coord2D::new(p2.0, p2.1), t2);
+    let mut c = (Coord2D::new(p3.0, p3.1), t3);
 
     // If all points are out of range, we do not fill.
     if a.0.y < y1 && b.0.y < y1 && c.0.y < y1 || a.0.y >= y2 && b.0.y >= y2 && c.0.y >= y2 { return; }
@@ -517,7 +517,7 @@ enum Texture<'a> {
 /*
 Ngon shape. A uniform shape with N vertices (Coord2D)
 */
-const N_MAX: u16 = 64;
+pub const N_MAX: u16 = 64;
 #[derive(Debug)]
 pub struct Ngon<'a> {
     center: Coord2D,
@@ -638,12 +638,9 @@ impl<'a> Ngon<'a> {
 }
 
 impl<'a> Sprite for Ngon<'a> {
-    // Fill drawing
-    fn draw(&self, buffer: &mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16, setup_matrix: &Matrix) {
-        
-        // We must apply our matrix transformations to our vertices.
+    fn gen_vertices(&self, setup_matrix: &Matrix) -> [(isize, isize, usize, usize); N_MAX as usize]{
         let m = Matrix::mult_matrices(&setup_matrix, &self.matrix); 
-        let mut vertices = [Coord2D { x: 0, y: 0 }; N_MAX as usize];
+        let mut vertices = [(0 as isize, 0 as isize, 0 as usize, 0 as usize); N_MAX as usize];
         let mut i = 0;
         for vertex in &self.vertices {
             let (x_t, y_t, _) = m.apply_to_vertex(vertex.x, vertex.y, 0.0);
@@ -652,16 +649,30 @@ impl<'a> Sprite for Ngon<'a> {
             let x: isize = ((x_t + 1.0) * 0.5 * 320.0) as isize; 
             let y: isize = ((1.0 - y_t) * 0.5 * 240.0) as isize; // Grows downwards
             
-            vertices[i] = Coord2D::new(x, y);
+            let mut u: usize = 0;
+            let mut v: usize = 0;
+
+            if let Some(Texture::Image(image)) = &self.texture {
+                // Mapped to [0.0, 1.0], so return to ([0, IMAGE_WIDTH], [0, IMAGE_HEIGHT])
+                u = (vertex.u * image.width as f32) as usize; 
+                v = (vertex.y * image.height as f32) as usize; 
+            }
+            
+            vertices[i] = (x, y, u, v);
             i += 1;
         }
+
+        vertices
+    }
+
+    fn draw(&self, vertices: &[(isize, isize, usize, usize); N_MAX as usize], buffer: &mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16, setup_matrix: &Matrix) {
+        let m = Matrix::mult_matrices(&setup_matrix, &self.matrix); 
 
         // Get new center
         let (cx_t, cy_t, _) = m.apply_to_vertex(0.0, 0.0, 0.0);
         let screen_cx = ((cx_t + 1.0) * 0.5 * 320.0) as isize;
         let screen_cy = ((1.0 - cy_t) * 0.5 * 240.0) as isize;
-        let screen_center = Coord2D::new(screen_cx, screen_cy);
-
+        let screen_center = (screen_cx, screen_cy);
         
         // Draw, according to texture
         match &self.texture {
@@ -677,7 +688,7 @@ impl<'a> Sprite for Ngon<'a> {
                     let mut b = vertices[(i + 1) % self.vertices.len()];
                     let mut c = screen_center;
 
-                    triangle_fill(a, b, c, &fill, buffer, y_offset);
+                    triangle_fill((a.0, a.1), (b.0, b.1), c, &fill, buffer, y_offset);
                 }
                 
                 // Outline draw with Bresenham's algorithm
@@ -686,36 +697,18 @@ impl<'a> Sprite for Ngon<'a> {
                     let p1 = vertices[i];
                     let p2 = vertices[(i + 1) % self.vertices.len()];
                     
-                    line_draw(p1, p2, &outline, buffer, y_offset);
+                    line_draw((p1.0, p1.1), (p2.0, p2.1), &outline, buffer, y_offset);
                 }
             },
 
             Some(Texture::Image(image)) => {
-                // We need to normalise our UV values
-                let mut uv_values = [(0 as usize, 0 as usize); N_MAX as usize];
-                let mut i = 0;
-                for vertex in &self.vertices {
-                    let (u, v) = (vertex.u, vertex.v);
-                    // Mapped to [0.0, 1.0], so return to ([0, IMAGE_WIDTH], [0, IMAGE_HEIGHT])
-                    let u: usize = (u * image.width as f32) as usize; 
-                    let v: usize = (v * image.height as f32) as usize; 
-                    
-                    uv_values[i] = (u, v);
-                    i += 1;
-                }
-
+                let c = (screen_center.0, screen_center.1, image.width as usize / 2, image.height as usize / 2);
                 // Fill draw, with scanline texture rasterization
                 for i in 0..self.vertices.len() {
                     // Grab current two points and center (3 points for triangle)
                     let mut a = vertices[i];
                     let mut b = vertices[(i + 1) % self.vertices.len()];
-                    let mut c = screen_center;
-                    
-                    let mut a_tex = uv_values[i];
-                    let mut b_tex = uv_values[(i + 1) % self.vertices.len()];
-                    let mut c_tex = (image.width as usize / 2, image.height as usize / 2);
-
-                    triangle_texture(a, a_tex, b, b_tex, c, c_tex, &image, buffer, y_offset);
+                    triangle_texture(a, b, c, &image, buffer, y_offset);
                 }
 
             },
@@ -892,11 +885,10 @@ impl<'a> Triangle<'a> {
 }
 
 impl<'a> Sprite for Triangle<'a> {
-    fn draw(&self, buffer: & mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16, setup_matrix: &Matrix) {
-        // Pass points through matrix transformation
-        
+    fn gen_vertices(&self, setup_matrix: &Matrix) -> [(isize, isize, usize, usize); N_MAX as usize]{
         let m = Matrix::mult_matrices(&setup_matrix, &self.matrix); 
-
+        let mut vertices = [(0 as isize, 0 as isize, 0 as usize, 0 as usize); N_MAX as usize];
+        
         let (x_t, y_t, _) = m.apply_to_vertex(self.p1.0, self.p1.1, 0.0);
         // Mapped to [-1, 1], so return to ([0, 360], [0, 240])
         let x: isize = ((x_t + 1.0) * 0.5 * 320.0) as isize; 
@@ -915,12 +907,29 @@ impl<'a> Sprite for Triangle<'a> {
         let y: isize = ((1.0 - y_t) * 0.5 * 240.0) as isize; // Grows downwards
         let p3 = Coord2D::new(x, y);
         
+        vertices[0] = (p1.x, p1.y, 0, 0);
+        vertices[1] = (p2.x, p2.y, 0, 0);
+        vertices[2] = (p3.x, p3.y, 0, 0);
+
+        vertices
+    }
+
+    fn draw(&self, vertices: &[(isize, isize, usize, usize); N_MAX as usize], buffer: & mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16, setup_matrix: &Matrix) {
         // Draw, according to texture
+        
+        let p1 = vertices[0];
+        let p2 = vertices[1];
+        let p3 = vertices[2];
+
         match self.texture {
             Some(Texture::Colour(fill, outline)) => {
                 // RGB565 means each px is two bytes.
                 let outline = RawU16::from(outline).into_inner().to_be_bytes();
                 let fill    = RawU16::from(fill)   .into_inner().to_be_bytes();
+
+                let p1 = (p1.0, p1.1);
+                let p2 = (p2.0, p2.1);
+                let p3 = (p3.0, p3.1);
 
                 triangle_fill(p1, p2, p3, &fill, buffer, y_offset);
 
@@ -1037,42 +1046,72 @@ impl<'a> Quad<'a> {
 }
 
 impl<'a> Sprite for Quad<'a> {
-    fn draw(&self, buffer: &mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16, setup_matrix: &Matrix) {
-        // Pass points through matrix transformation
-        
+    fn gen_vertices(&self, setup_matrix: &Matrix) -> [(isize, isize, usize, usize); N_MAX as usize]{
         let m = Matrix::mult_matrices(&setup_matrix, &self.matrix); 
-
+        let mut vertices = [(0 as isize, 0 as isize, 0 as usize, 0 as usize); N_MAX as usize];
+        
         let (x_t, y_t, _) = m.apply_to_vertex(self.p1.x, self.p1.y, 0.0);
         // Mapped to [-1, 1], so return to ([0, 360], [0, 240])
         let x: isize = ((x_t + 1.0) * 0.5 * 320.0) as isize; 
         let y: isize = ((1.0 - y_t) * 0.5 * 240.0) as isize; // Grows downwards
-        let p1 = Coord2D::new(x, y);
+        let mut p1 = (x, y, 0 as usize, 0 as usize);
         
         let (x_t, y_t, _) = m.apply_to_vertex(self.p2.x, self.p2.y, 0.0);
         // Mapped to [-1, 1], so return to ([0, 360], [0, 240])
         let x: isize = ((x_t + 1.0) * 0.5 * 320.0) as isize; 
         let y: isize = ((1.0 - y_t) * 0.5 * 240.0) as isize; // Grows downwards
-        let p2 = Coord2D::new(x, y);
+        let mut p2 = (x, y, 0 as usize, 0 as usize);
 
         let (x_t, y_t, _) = m.apply_to_vertex(self.p3.x, self.p3.y, 0.0);
         // Mapped to [-1, 1], so return to ([0, 360], [0, 240])
         let x: isize = ((x_t + 1.0) * 0.5 * 320.0) as isize; 
         let y: isize = ((1.0 - y_t) * 0.5 * 240.0) as isize; // Grows downwards
-        let p3 = Coord2D::new(x, y);
+        let mut p3 = (x, y, 0 as usize, 0 as usize);
         
         let (x_t, y_t, _) = m.apply_to_vertex(self.p4.x, self.p4.y, 0.0);
         // Mapped to [-1, 1], so return to ([0, 360], [0, 240])
         let x: isize = ((x_t + 1.0) * 0.5 * 320.0) as isize; 
         let y: isize = ((1.0 - y_t) * 0.5 * 240.0) as isize; // Grows downwards
-        let p4 = Coord2D::new(x, y);
+        let mut p4 = (x, y, 0 as usize, 0 as usize);
+
+        if let Some(Texture::Image(image)) = &self.texture {
+            p1.2 = (self.p1.u * image.width as f32) as usize;
+            p1.3 = (self.p1.v * image.height as f32) as usize;
+            p2.2 = (self.p2.u * image.width as f32) as usize;
+            p2.3 = (self.p2.v * image.height as f32) as usize;
+            p3.2 = (self.p3.u * image.width as f32) as usize;
+            p3.3 = (self.p3.v * image.height as f32) as usize;
+            p4.2 = (self.p4.u * image.width as f32) as usize;
+            p4.3 = (self.p4.v * image.height as f32) as usize;
+        }
         
+        vertices[0] = p1;
+        vertices[1] = p2;
+        vertices[2] = p3;
+        vertices[3] = p4;
+
+        vertices
+    }
+
+    fn draw(&self, vertices: &[(isize, isize, usize, usize); N_MAX as usize], buffer: &mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16, setup_matrix: &Matrix) {
+        
+        let p1 = vertices[0];
+        let p2 = vertices[1];
+        let p3 = vertices[2];
+        let p4 = vertices[3];
+
         // Draw, according to texture
         match &self.texture {
             &Some(Texture::Colour(fill, outline)) => {
                 // RGB565 means each px is two bytes.
                 let outline = RawU16::from(outline).into_inner().to_be_bytes();
                 let fill    = RawU16::from(fill)   .into_inner().to_be_bytes();
-                
+
+                let p1 = (p1.0, p1.1);
+                let p2 = (p2.0, p2.1);
+                let p3 = (p3.0, p3.1);
+                let p4 = (p4.0, p4.1);
+
                 triangle_fill(p1, p2, p3, &fill, buffer, y_offset);
                 triangle_fill(p4, p2, p3, &fill, buffer, y_offset);
 
@@ -1083,26 +1122,8 @@ impl<'a> Sprite for Quad<'a> {
             },
 
             Some(Texture::Image(image)) => {
-                // We need to normalise our UV values
-                
-                let u = (self.p1.u * image.width as f32) as usize;
-                let v = (self.p1.v * image.height as f32) as usize;
-                let t1 = (u, v);
-
-                let u = (self.p2.u * image.width as f32) as usize;
-                let v = (self.p2.v * image.height as f32) as usize;
-                let t2 = (u, v);
-
-                let u = (self.p3.u * image.width as f32) as usize;
-                let v = (self.p3.v * image.height as f32) as usize;
-                let t3 = (u, v);
-
-                let u = (self.p4.u * image.width as f32) as usize;
-                let v = (self.p4.v * image.height as f32) as usize;
-                let t4 = (u, v);
-
-                triangle_texture(p1, t1, p2, t2, p3, t3, &image, buffer, y_offset);
-                triangle_texture(p4, t4, p2, t2, p3, t3, &image, buffer, y_offset);
+                triangle_texture(p1, p2, p3, &image, buffer, y_offset);
+                triangle_texture(p4, p2, p3, &image, buffer, y_offset);
             },
             _ => panic!("Quad texture not defined properly")
         }

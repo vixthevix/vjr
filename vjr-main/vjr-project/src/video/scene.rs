@@ -15,7 +15,7 @@ use crate::{
 /*
 Struct for holding pointers to Sprites for easy display. 
 */
-const SCENE_SPRITE_MAX: u16 = 64;
+pub const SCENE_SPRITE_MAX: u16 = 64;
 pub struct Scene {
     pub sprites: Vec<*mut dyn Sprite, { SCENE_SPRITE_MAX as usize }>,
     pub bg_colour: RGB,
