@@ -23,10 +23,12 @@ use crate::{
 
 use heapless::Vec;
 
-pub const DISPLAY_BUFFER_SIZE: usize = 10240;
 
 pub const DISPLAY_BUFFER_WIDTH : usize = 320;
 pub const DISPLAY_BUFFER_HEIGHT: usize = 16;
+const     DISPLAY_BUFFER_COUNT : usize = 15;
+
+pub const DISPLAY_BUFFER_SIZE: usize = DISPLAY_BUFFER_WIDTH * DISPLAY_BUFFER_HEIGHT * 2;
 
 #[macro_export]
 macro_rules! display_buffer_new {
@@ -87,15 +89,18 @@ impl<P: Pusher> Renderer<P> {
         Self::fill_bg(buffer_a, scene.bg_colour);
         unsafe {
             for (index, &sprite) in scene.sprites.iter().enumerate() {
-                (*sprite).draw(&cache[index], buffer_a, 0, &m);
+                (*sprite).draw(&cache[index], buffer_a, 0);
             }
         }
         
+        // Prepare for pushing
+        pusher.prepare();
+
         // Loop through alternating push and writes
         // until penultimate chunk
-        for chunk in 1..15 {
+        for chunk in 1..DISPLAY_BUFFER_COUNT {
             // Prepare buffers and y coords dependant on swap
-            let read_y  = ((chunk - 1) * DISPLAY_BUFFER_HEIGHT) as u16;
+            // let read_y  = ((chunk - 1) * DISPLAY_BUFFER_HEIGHT) as u16;
             let write_y = (chunk * DISPLAY_BUFFER_HEIGHT) as u16;
 
             // Push and Write at the same time
@@ -103,12 +108,12 @@ impl<P: Pusher> Renderer<P> {
             match buffer_swap {
                 true => {
                     join(
-                        pusher.push(buffer_a, read_y),
+                        pusher.push(buffer_a),
                         async {
                             Self::fill_bg(buffer_b, scene.bg_colour);
                             unsafe {
                                 for (index, &sprite) in scene.sprites.iter().enumerate() {
-                                    (*sprite).draw(&cache[index], buffer_b, write_y, &m);
+                                    (*sprite).draw(&cache[index], buffer_b, write_y);
                                 }
                             }
                         }
@@ -116,12 +121,12 @@ impl<P: Pusher> Renderer<P> {
                 },
                 false => {
                     join(
-                        pusher.push(buffer_b, read_y),
+                        pusher.push(buffer_b),
                         async {
                             Self::fill_bg(buffer_a, scene.bg_colour);
                             unsafe {
                                 for (index, &sprite) in scene.sprites.iter().enumerate() {
-                                    (*sprite).draw(&cache[index], buffer_a, write_y, &m);
+                                    (*sprite).draw(&cache[index], buffer_a, write_y);
                                 }
                             }
                         }
@@ -135,8 +140,10 @@ impl<P: Pusher> Renderer<P> {
         }
 
         // Finally, push the final chunk just written
-        pusher.push(if buffer_swap { buffer_a } else { buffer_b }, (14 * DISPLAY_BUFFER_HEIGHT) as u16).await;
+        pusher.push(if buffer_swap { buffer_a } else { buffer_b }).await;
+        pusher.finish();
     }
+
     
     // General function for filling in a background colour
     fn fill_bg(buffer: &mut [u8; DISPLAY_BUFFER_SIZE], bg_colour: RGB) {

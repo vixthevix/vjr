@@ -1,0 +1,18 @@
+#####################
+# HOW TO MAKE FONTS #
+#####################
+
+A Font will be a kind of Sprite. Maybe not called a Font but for now, yeah.
+
+Not goint to use like a ttf or anything like that I don't think. Instead, using bitmap fonts is the way.
+
+Two files needed: the VIMG fontsheet, and a Meta file.
+
+This Meta file contains the dimensions of each font (to evenly divide the fontsheet), and a list of the characters available, sorted in fontsheet order. However, this may eat up a bit of data, so it may be that characters are
+limited to ASCII and must be sorted in ASCII ordering.
+
+If not too much memory is eaten, we could use a hashmap of characters to uv values.
+
+actually no just use an array and treat each index as ASCII value. The metadata informs what characters are available for printing.
+
+

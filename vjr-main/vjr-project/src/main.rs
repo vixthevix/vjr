@@ -110,11 +110,26 @@ struct HomePusher<'a> {
 }
 
 impl<'a> Pusher for HomePusher<'a> {
-    async fn push(&mut self, buffer: &[u8], y_offset: u16) {
+    fn prepare(&mut self) {
+        unsafe {
+            (*self.display).write_prepare();
+        }
+    }
+
+    // async fn push(&mut self, buffer: &[u8], y_offset: u16) {
+    async fn push(&mut self, buffer: &[u8]) {
         // Use SPI DMA to bush buffer to display.
         unsafe {
-            let display = self.display;
-            (*display).write_buffer(buffer, y_offset).await;
+            // let display = self.display;
+            // (*display).write_buffer(buffer, y_offset).await;
+            (*self.display).write_buffer(buffer).await;
+
+        }
+    }
+
+    fn finish(&mut self) {
+        unsafe {
+            (*self.display).write_finish();
         }
     }
 } 
@@ -196,7 +211,7 @@ async fn main(spawner: Spawner) {
     // Display setup
     let pinout      = display_pinout_new!(peripherals);
     let cmd_buffer  = display_cmd_buffer_init!(DISPLAY_CMD_BUFFER);
-    let dma_channel = peripherals.DMA_SPI2;
+    let dma_channel = peripherals.DMA_SPI3;
     let mut display = Display::new(pinout, dma_channel, cmd_buffer);
     
     // Direct communication with screen
@@ -253,7 +268,7 @@ async fn main(spawner: Spawner) {
         .with_texture(CSM_VIMG);
 
     // Add shapes to scene
-    // home_scene.add(&mut ngon);
+    home_scene.add(&mut ngon);
     home_scene.add(&mut triangle);
     home_scene.add(&mut long_triangle);
     home_scene.add(&mut quad);
@@ -277,7 +292,6 @@ async fn main(spawner: Spawner) {
     loop {
         loop { // Home menu
             triangle.rotate_by(angle);
-            ngon.rotate_around(pivot, angle);
             circle_image.rotate_around(pivot, counter_angle);
             circle_image.rotate_by(angle);
 

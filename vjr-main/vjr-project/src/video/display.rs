@@ -67,7 +67,7 @@ extern crate alloc;
 Container struct for pinout
 */
 pub struct PinOut<'a> {
-    pub spi2: esp_hal::peripherals::SPI2  <'a>, 
+    pub spi3: esp_hal::peripherals::SPI3  <'a>, 
     pub mosi: esp_hal::peripherals::GPIO23<'a>,
     pub sck : esp_hal::peripherals::GPIO18<'a>,
     pub cs  : esp_hal::peripherals::GPIO15<'a>,
@@ -80,7 +80,7 @@ pub struct PinOut<'a> {
 macro_rules! display_pinout_new {
     ($p:expr) => {
         PinOut {
-            spi2: $p.SPI2  ,
+            spi3: $p.SPI3  ,
             mosi: $p.GPIO23,
             sck:  $p.GPIO18,
             cs:   $p.GPIO15,
@@ -236,7 +236,7 @@ impl<'a> Display<'a> {
 
         // SPI specific pins
         let spi = Spi::new(
-            pinout.spi2,
+            pinout.spi3,
             SpiConfig::default()
                 .with_frequency(Rate::from_mhz(80))
                 .with_mode(SpiMode::_0),
@@ -296,12 +296,12 @@ impl<'a> Display<'a> {
         self.data_mode.set_low(); // For safety
     }
 
-    pub async fn write_buffer(&mut self, buffer: &[u8], y_offset: u16) {
+    pub fn write_prepare(&mut self) {
         // Define drawing region
         let x1: u16 = 0;
-        let y1: u16 = y_offset;
-        let x2: u16 = 319;          // 320 px display width (HARDCODED, CHANGE LATER)
-        let y2: u16 = y_offset + 15; // 16  px buffer height (HARDCODED, CHANGE LATER)
+        let y1: u16 = 0;
+        let x2: u16 = 320 - 1;
+        let y2: u16 = 240 - 1; 
         
 
         // To fill the screen, we have to set the column and row addresses.
@@ -322,8 +322,50 @@ impl<'a> Display<'a> {
 
         // Row set
         self.execute(Command::SetRowCoords, &[y1[0], y1[1], y2[0], y2[1]]);
+        
+        self.data_mode.set_low();
+        self.interface.write(&[Command::MemoryWrite as u8]).unwrap();
 
-        // Memory write
-        self.execute(Command::MemoryWrite, buffer);
+        self.data_mode.set_high();
     }
+    
+   pub async fn write_buffer(&mut self, buffer: &[u8]) {
+       self.interface.write(buffer).unwrap();
+   }
+
+    pub fn write_finish(&mut self) {
+        self.data_mode.set_high();
+    }
+
+
+//    pub async fn write_buffer(&mut self, buffer: &[u8], y_offset: u16) {
+//        // Define drawing region
+//        let x1: u16 = 0;
+//        let y1: u16 = y_offset;
+//        let x2: u16 = 319;          // 320 px display width (HARDCODED, CHANGE LATER)
+//        let y2: u16 = y_offset + 15; // 16  px buffer height (HARDCODED, CHANGE LATER)
+//        
+//
+//        // To fill the screen, we have to set the column and row addresses.
+//        // Command 0x2a => Column Address Set
+//        // Command 0x2b => Page (Row) Address Set
+//        // Command 0x2c => Memory Write
+//        
+//        // Additionally, we need to split our coordinates into u16 values,
+//        // Due to arguments being u8 for raw data.
+//        
+//        let x1 = x1.to_be_bytes();
+//        let y1 = y1.to_be_bytes();
+//        let x2 = x2.to_be_bytes();
+//        let y2 = y2.to_be_bytes();
+//        
+//        // Column set
+//        self.execute(Command::SetColumnCoords, &[x1[0], x1[1], x2[0], x2[1]]);
+//
+//        // Row set
+//        self.execute(Command::SetRowCoords, &[y1[0], y1[1], y2[0], y2[1]]);
+//
+//        // Memory write
+//        self.execute(Command::MemoryWrite, buffer);
+//    }
 }
