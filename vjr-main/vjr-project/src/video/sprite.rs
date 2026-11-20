@@ -1151,3 +1151,105 @@ impl<'a> Sprite for Quad<'a> {
     }
 }
 
+pub struct Font<'a> {
+    fontsheet: Image<'a>,
+    characters: &[(usize, usize); 95],
+}
+
+impl<'a> Font<'a> {
+    pub fn new(fontsheet: Image<'a>, metadata: &'a [u8]) -> Self {
+        
+        // Metadata contains further information
+
+        Self {
+            center,
+            radius,
+            rotation,
+            orbit_pivot,
+            orbit_rotation,
+            vertices,
+            matrix,
+            texture: None, 
+        }
+    }
+
+    pub fn with_colour(self, fill: RGB, outline: RGB) -> Self {
+        Self {
+            texture: Some(Texture::Colour(fill, outline)),
+            ..self
+        }
+    }
+
+    pub fn with_texture(mut self, data: &'a [u8]) -> Self {
+        // Wrap in Image and calculate UV coordinates
+        let image = Image::new(data);
+        
+        for vertex in self.vertices.iter_mut() {
+            // Base on x coordinates, already mapped to [-1, 1]
+            // So map to [0, 1]
+            vertex.u = (vertex.x + 1.0) * 0.5;
+            vertex.v = (vertex.y + 1.0) * 0.5;
+        }
+
+        Self {
+            texture: Some(Texture::Image(image)),
+            ..self
+        }
+    }
+     
+    // Updates matrix with stored information from scratch, prevents floating point math error 
+    fn update_matrix(&mut self) {
+        let mut m = Matrix::identity();
+        
+        if let Some(pivot) = self.orbit_pivot { // If orbiting
+            // Encapsulate the transformation for an orbit
+            m.translate(pivot.x as f32, pivot.y as f32, 0.0);       // Set at the pivot
+            m.rotate(self.orbit_rotation, Axis::Z); // Rotate around it
+            m.translate(-pivot.x as f32, -pivot.y as f32, 0.0);     // Set back to origin
+        }
+
+        // Perform Translate Rotate Scale update
+        m.translate(self.center.x as f32, self.center.y as f32, 0.0);
+        m.rotate(self.rotation, Axis::Z);
+        m.scale(self.radius as f32, self.radius as f32, 1.0);
+
+        self.matrix = m
+    }
+    
+    // Rotation around center
+    pub fn rotate_by(&mut self, angle: usize) { 
+        self.rotation = (self.rotation + angle) & 0x0FFF;
+        self.update_matrix();
+    }
+    
+    // Rotation around pivot
+    pub fn rotate_around(&mut self, pivot: Coord2D, angle: usize) {
+        // Update orbit values
+        self.orbit_pivot = Some(pivot);
+        self.orbit_rotation = (self.orbit_rotation + angle) & 0x0FFF;
+        self.update_matrix();
+    }
+
+}
+
+
+
+pub struct Text<'a> {
+    
+    character: u8,
+
+    p1: Vertex2D,
+    p2: Vertex2D,
+    p3: Vertex2D,
+    p4: Vertex2D,
+
+    // Store the current center of the quad, for easy manipulation
+    centroid: (f32, f32),
+
+    width: f32,
+    height: f32,
+    
+    matrix: Matrix,
+    
+    texture: Option<Texture<'a>>,
+}

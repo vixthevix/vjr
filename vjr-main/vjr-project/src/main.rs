@@ -149,9 +149,9 @@ impl<'a> HomePusher<'a> {
 // Static display buffer for command.
 display_cmd_buffer_new!(DISPLAY_CMD_BUFFER);
 
-const APPLE_VIMG: &[u8]    = include_bytes!("../images/appl.vimg");
-// const GOLDSHIP_VIMG: &[u8] = include_bytes!("../images/goldship_optimized.vimg");
-const CSM_VIMG: &[u8] = include_bytes!("../images/csm_movie.vimg");
+const APPLE_VIMG: &[u8] = include_bytes!("../images/appl.vimg");
+const CSM_VIMG  : &[u8] = include_bytes!("../images/csm_movie.vimg");
+const FONT_VIMG : &[u8] = include_bytes!("../images/small-font.vimg");
 
 #[allow(
     clippy::large_stack_frames,
@@ -282,8 +282,9 @@ async fn main(spawner: Spawner) {
     let counter_angle = ANGLE_360 - (angle >> 2);
     let pivot = Coord2D::new(160, 120);
      
-    // Game ticker for 60 FPS
-    let mut ticks = Ticker::every(Duration::from_hz(60));
+    // Game ticker for set FPS
+    let fps = 30;
+    let mut ticks = Ticker::every(Duration::from_hz(fps));
     
     // Used for measuring FPS
     let mut timer = Instant::now();
@@ -303,7 +304,7 @@ async fn main(spawner: Spawner) {
             let fps = 1e6 as f32 / timer.elapsed().as_micros() as f32;
             timer = Instant::now();
             info!("FPS: {fps}");
-             ticks.next().await;
+            ticks.next().await;
         }
         
 //        loop { // Background BIOS

@@ -16,3 +16,29 @@ If not too much memory is eaten, we could use a hashmap of characters to uv valu
 actually no just use an array and treat each index as ASCII value. The metadata informs what characters are available for printing.
 
 
+###################
+# METADATA FORMAT #
+###################
+
+Metadata consists of:
+	character height + width in px
+	list of each character available
+
+
+#################
+# STRUCT FORMAT #
+#################
+
+So it will be more like a Text struct.
+
+	- actual text, u8 array, 64 characters max.
+	- start (x, y)
+	- Font reference
+	- text size
+
+Actually, also have a Font struct
+
+	- VIMG spritesheet
+	- ASCII array containing (u, v) values
+
+
