@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+
+BIN="bin"
+SRC="src"
+EXE="main"
+
+gcc $SRC/$EXE.c -o $BIN/$EXE -lraylib -lGL -lm -lpthread -ldl -lrt -lX11
+
+# read -p "Run? (y/n) " response
+# 
+# if [ $response == "y" ]; then
+#     
+#     echo running...
+#     ./$1
+# 
+# fi

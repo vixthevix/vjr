@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+declare -a programs=(
+    "imgFormat"
+    "imgView"
+    "fontFormat"
+)
+
+for i in "${programs[@]}" 
+do
+    echo "[BUILDING] $i"
+    cd "$i"
+    ./build
+    cd ..
+done

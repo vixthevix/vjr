@@ -19,7 +19,7 @@ Because its RGB565, each pixel will consist of 2 uint8_ts. for an uncompressed f
 */
 
 #define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
+#include "../../shared/stb_image.h"
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
