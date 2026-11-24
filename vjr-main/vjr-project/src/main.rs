@@ -8,24 +8,24 @@
 #![deny(clippy::large_stack_frames)]
 
 use embassy_executor::Spawner;
-use embassy_time::{Duration, Timer, Ticker, Instant};
+use embassy_time::{Duration, Ticker, Instant};
 use esp_backtrace as _;
 use esp_hal::clock::CpuClock;
 use esp_hal::timer::timg::TimerGroup;
 use log::info;
 
-use esp_hal::gpio::Output;
+// use esp_hal::gpio::Output;
 
-use embassy_sync::{
-    channel::{
-        Channel,
-        Receiver,
-        Sender
-    },
-    blocking_mutex::raw::NoopRawMutex
-};
+//use embassy_sync::{
+//    channel::{
+//        Channel,
+//        Receiver,
+//        Sender
+//    },
+//    blocking_mutex::raw::NoopRawMutex
+//};
 
-use embassy_futures::*;
+//use embassy_futures::*;
 
 use static_cell::StaticCell;
 
@@ -44,7 +44,7 @@ use crate::{
         scene::*,
     },
     matrix::{
-        prelude::*,
+        // prelude::*,
         camera::*,
         projection::*,
     },
@@ -149,9 +149,9 @@ impl<'a> HomePusher<'a> {
 // Static display buffer for command.
 display_cmd_buffer_new!(DISPLAY_CMD_BUFFER);
 
-const APPLE_VIMG: &[u8] = include_bytes!("../images/appl.vimg");
-const CSM_VIMG  : &[u8] = include_bytes!("../images/csm_movie.vimg");
-const FONT_VIMG : &[u8] = include_bytes!("../images/small-font.vimg");
+const APPLE_VIMG: &[u8] = include_bytes!("../files/images/appl.vimg");
+const CSM_VIMG  : &[u8] = include_bytes!("../files/images/csm_movie.vimg");
+const VFONT     : &[u8] = include_bytes!("../files/fonts/v-font-small.vfont");
 
 #[allow(
     clippy::large_stack_frames,

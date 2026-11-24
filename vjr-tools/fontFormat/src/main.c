@@ -21,6 +21,27 @@ Because its RGB565, each pixel will consist of 2 uint8_ts. for an uncompressed f
 #include "../../shared/vimg.h"
 #include <stdio.h>
 
+// Read a number up to a limit of 9999.
+// Returns the number if valid with no extraneous characters other
+// than leading zeroes, or 0xFFFFu otherwise.  An empty input is
+// not considered valid.
+uint16_t read_number(void)
+{
+  uint16_t value_input = 0;
+  int ch = getchar();
+  if (ch < 0 || ch == '\n')
+    return 0xFFFFu;
+  do
+  {
+    if (ch >= '0' && ch <= '9' && value_input <= 9999)
+      value_input = value_input*10 + (ch - '0');
+    else
+      value_input = 0xFFFFu;
+    ch = getchar();
+  } while(ch >= 0 && ch != '\n');
+  return value_input;
+}
+
 int main(int argc, char** argv) {
     if (argc <= 1) {
         printf("Please attach the name of the file you wish to convert. Thank you.\n");
@@ -34,17 +55,18 @@ int main(int argc, char** argv) {
     uint16_t height = 0, width = 0, glyphs_per_col = 0, glyphs_per_row = 0;
 
     printf("Glyph width: ");
-    scanf("%u", &width);
+    width = read_number();
 
     printf("Glyph height: ");
-    scanf("%u", &height);
+    height = read_number();
     
     printf("Glyphs per column: ");
-    scanf("%u", &glyphs_per_col);
+    glyphs_per_col = read_number();
     
     printf("Glyph per row: ");
-    scanf("%u", &glyphs_per_row);
-
+    glyphs_per_row = read_number();
+    
+    printf("width: %u, height: %u", width, height);
 
     Args args = parse_args(argc, argv);
     
@@ -61,10 +83,19 @@ int main(int argc, char** argv) {
         
         // Font specific data
         fprintf(outputFile, "VFONT");
-        fwrite(&width,          sizeof(uint16_t), 1, outputFile);
-        fwrite(&height,         sizeof(uint16_t), 1, outputFile);
-        fwrite(&glyphs_per_col, sizeof(uint16_t), 1, outputFile);
-        fwrite(&glyphs_per_row, sizeof(uint16_t), 1, outputFile);
+
+        fputc((uint8_t)(width >> 8),     outputFile);
+        fputc((uint8_t)(width & 0x00ff), outputFile);
+
+        fputc((uint8_t)(height >> 8),     outputFile);
+        fputc((uint8_t)(height & 0x00ff), outputFile);
+        
+        fputc((uint8_t)(glyphs_per_col >> 8),     outputFile);
+        fputc((uint8_t)(glyphs_per_col & 0x00ff), outputFile);
+        
+        fputc((uint8_t)(glyphs_per_row >> 8),     outputFile);
+        fputc((uint8_t)(glyphs_per_row & 0x00ff), outputFile);
+
         fprintf(outputFile, "VFONT");
         
         // Image specific data

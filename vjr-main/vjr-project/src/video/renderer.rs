@@ -21,7 +21,7 @@ use crate::{
     },
 };
 
-use heapless::Vec;
+// use heapless::Vec;
 
 
 pub const DISPLAY_BUFFER_WIDTH : usize = 320;
@@ -76,7 +76,7 @@ impl<P: Pusher> Renderer<P> {
 
         // For each sprite in the scene, cache the vertex transformations.
         // Since they are unchanged between chunk writes
-        let mut cache = [[(0 as isize, 0 as isize, 0 as usize, 0 as usize); sprite::N_MAX as usize]; SCENE_SPRITE_MAX as usize];
+        let mut cache = [[(0 as isize, 0 as isize, 0 as usize, 0 as usize); sprite::SPRITE_CACHE_MAX]; SCENE_SPRITE_MAX as usize];
         unsafe {
             for (index, &sprite) in scene.sprites.iter().enumerate() {
                 (*sprite).gen_vertices(&mut cache[index], &m);

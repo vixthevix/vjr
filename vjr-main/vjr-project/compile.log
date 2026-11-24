@@ -1,175 +1,152 @@
-    Checking vjr-project v0.1.0 (/home/vixthevix/Documents/code/personal/vjr/vjr-main/vjr-project)
-warning: unused import: `esp_hal::dma_buffers`
-  --> src/main.rs:19:5
-   |
-19 | use esp_hal::dma_buffers;
-   |     ^^^^^^^^^^^^^^^^^^^^
-   |
-   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+warning: unused variable: `buffer`
+    --> src/video/sprite.rs:1360:81
+     |
+1360 | ...E_CACHE_MAX], buffer: & mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16) {
+     |                  ^^^^^^ help: if this is intentional, prefix it with an underscore: `_buffer`
+     |
+     = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
 
-warning: unused import: `draw_target::DrawTarget`
-  --> src/main.rs:26:5
-   |
-26 |     draw_target::DrawTarget, // Trait
-   |     ^^^^^^^^^^^^^^^^^^^^^^^
+warning: unused variable: `y_offset`
+    --> src/video/sprite.rs:1360:122
+     |
+1360 | ...FFER_SIZE], y_offset: u16) {
+     |                ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_y_offset`
 
-warning: unused import: `crate::video::renderer::DISPLAY_BUFFER_SIZE`
- --> src/video/pusher.rs:4:5
-  |
-4 | use crate::video::renderer::DISPLAY_BUFFER_SIZE;
-  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+warning: unused variable: `p1`
+    --> src/video/sprite.rs:1363:13
+     |
+1363 |         let p1 = vertices[0];
+     |             ^^ help: if this is intentional, prefix it with an underscore: `_p1`
 
-warning: unused import: `RgbColor`
- --> src/video/renderer.rs:5:9
-  |
-5 |         RgbColor, // Trait
-  |         ^^^^^^^^
+warning: unused variable: `p2`
+    --> src/video/sprite.rs:1364:13
+     |
+1364 |         let p2 = vertices[1];
+     |             ^^ help: if this is intentional, prefix it with an underscore: `_p2`
 
-warning: unused import: `RgbColor`
- --> src/video/scene.rs:4:9
-  |
-4 |         RgbColor, // Trait
-  |         ^^^^^^^^
+warning: unused variable: `p3`
+    --> src/video/sprite.rs:1365:13
+     |
+1365 |         let p3 = vertices[2];
+     |             ^^ help: if this is intentional, prefix it with an underscore: `_p3`
 
-warning: unused import: `crate::video::display::*`
-  --> src/video/sprite.rs:19:5
-   |
-19 | use crate::video::display::*;
-   |     ^^^^^^^^^^^^^^^^^^^^^^^^
-
-warning: unreachable expression
-   --> src/main.rs:240:9
+warning: constant `VFONT` is never used
+   --> src/main.rs:154:7
     |
-234 | /         loop { // Home menu
-235 | |         
-236 | |             
-237 | |             renderer.draw_scene(&mut home_scene);
-238 | |         }
-    | |_________- any code following this expression is unreachable
-239 |           
-240 | /         loop { // Background BIOS
-241 | |             
-242 | |         }
-    | |_________^ unreachable expression
+154 | const VFONT     : &[u8] = include_bytes!("../files/fonts/v-font-small.vfont");
+    |       ^^^^^
     |
-    = note: `#[warn(unreachable_code)]` (part of `#[warn(unused)]`) on by default
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
 
-warning: unused variable: `spawner`
-   --> src/main.rs:183:15
+warning: fields `compression` and `meta` are never read
+   --> src/video/sprite.rs:470:9
     |
-183 | async fn main(spawner: Spawner) {
-    |               ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_spawner`
-    |
-    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
-
-warning: unused variable: `triangle`
-   --> src/main.rs:227:9
-    |
-227 |     let triangle = Triangle::new_equilateral(Coord2D::new(160, 120), 10)
-    |         ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_triangle`
-
-error[E0624]: method `set_address_window` is private
-   --> src/video/display.rs:173:24
-    |
-173 |         self.interface.set_address_window(x1, y1, x2, y2).unwrap();
-    |                        ^^^^^^^^^^^^^^^^^^ private method
-    |
-   ::: /home/vixthevix/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/mipidsi-0.10.0/src/lib.rs:301:5
-    |
-301 |     fn set_address_window(&mut self, sx: u16, sy: u16, ex: u16, ey: u16) -> Result<(), DI::Error> {
-    |     --------------------------------------------------------------------------------------------- private method defined here
-
-error[E0599]: no method named `bus_mut` found for struct `mipidsi::Display<DI, MODEL, RST>` in the current scope
-   --> src/video/display.rs:176:38
-    |
-176 |         let spi_bus = self.interface.bus_mut();
-    |                                      ^^^^^^^ method not found in `Display<SpiInterface<'a, ..., ...>, ..., ...>`
-    |
-    = note: the full name for the type has been written to '/home/vixthevix/Documents/code/personal/vjr/vjr-main/vjr-project/target/xtensa-esp32-none-elf/debug/deps/vjr_project-49a066bb6cd4a7ff.long-type-9597648421797034304.txt'
-    = note: consider using `--verbose` to print the full type name to the console
-
-warning: variable does not need to be mutable
-  --> src/video/renderer.rs:56:17
-   |
-56 |             let mut cur_buffer = if buffer_swap { &mut *buffer_a } else { &mut *buffer_b };
-   |                 ----^^^^^^^^^^
-   |                 |
-   |                 help: remove this `mut`
-   |
-   = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
-
-error[E0499]: cannot borrow `*buffer_a` as mutable more than once at a time
-  --> src/video/renderer.rs:56:51
-   |
-56 |             let mut cur_buffer = if buffer_swap { &mut *buffer_a } else { &mut *buffer_b };
-   |                                                   ^^^^^^^^^^^^^^ `*buffer_a` was mutably borrowed here in the previous iteration of the loop
+467 | struct Image<'a> {
+    |        ----- fields in this struct
 ...
-64 |                     (*sprite).draw(cur_buffer, cur_y);
-   |                     --------------------------------- argument requires that `*buffer_a` is borrowed for `'static`
+470 |     pub compression: u8,
+    |         ^^^^^^^^^^^
+471 |     
+472 |     pub meta: &'a [u8], // Metadata for compression and such.
+    |         ^^^^
+    |
+    = note: `Image` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
 
-error[E0499]: cannot borrow `*buffer_b` as mutable more than once at a time
-  --> src/video/renderer.rs:56:75
-   |
-56 |             let mut cur_buffer = if buffer_swap { &mut *buffer_a } else { &mut *buffer_b };
-   |                                                                           ^^^^^^^^^^^^^^ `*buffer_b` was mutably borrowed here in the previous iteration of the loop
+warning: fields `centroid`, `width`, and `height` are never read
+   --> src/video/sprite.rs:989:5
+    |
+981 | pub struct Quad<'a> {
+    |            ---- fields in this struct
 ...
-64 |                     (*sprite).draw(cur_buffer, cur_y);
-   |                     --------------------------------- argument requires that `*buffer_b` is borrowed for `'static`
+989 |     centroid: (f32, f32),
+    |     ^^^^^^^^
+990 |
+991 |     width: f32,
+    |     ^^^^^
+992 |     height: f32,
+    |     ^^^^^^
 
-error[E0521]: borrowed data escapes outside of method
-  --> src/video/renderer.rs:64:21
-   |
-48 |     pub fn draw_scene(&mut self, scene: &mut Scene) {
-   |                       ---------
-   |                       |
-   |                       `self` is a reference that is only valid in the method body
-   |                       let's call the lifetime of this reference `'1`
+warning: fields `fontsheet`, `glyph_width`, `glyph_height`, and `characters` are never read
+    --> src/video/sprite.rs:1163:5
+     |
+1162 | pub struct Font<'a> {
+     |            ---- fields in this struct
+1163 |     fontsheet: Image<'a>,
+     |     ^^^^^^^^^
+1164 |     glyph_width: u16,
+     |     ^^^^^^^^^^^
+1165 |     glyph_height: u16,
+     |     ^^^^^^^^^^^^
+1166 |     characters: [(usize, usize); 95],
+     |     ^^^^^^^^^^
+
+warning: fields `font`, `size`, and `rotation` are never read
+    --> src/video/sprite.rs:1236:5
+     |
+1233 | pub struct Text<'a> {
+     |            ---- fields in this struct
 ...
-64 |                     (*sprite).draw(cur_buffer, cur_y);
-   |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-   |                     |
-   |                     `self` escapes the method body here
-   |                     argument requires that `'1` must outlive `'static`
+1236 |     font: &'a Font<'a>,
+     |     ^^^^
+1237 |     size: f32,
+     |     ^^^^
+1238 |     position: Coord2D,
+1239 |     rotation: usize,
+     |     ^^^^^^^^
 
-error[E0499]: cannot borrow `*cur_buffer` as mutable more than once at a time
-  --> src/video/renderer.rs:64:36
-   |
-64 |                     (*sprite).draw(cur_buffer, cur_y);
-   |                     ---------------^^^^^^^^^^--------
-   |                     |              |
-   |                     |              `*cur_buffer` was mutably borrowed here in the previous iteration of the loop
-   |                     argument requires that `*cur_buffer` is borrowed for `'static`
-
-error[E0502]: cannot borrow `*cur_buffer` as immutable because it is also borrowed as mutable
-  --> src/video/renderer.rs:68:25
-   |
-64 |                     (*sprite).draw(cur_buffer, cur_y);
-   |                     ---------------------------------
-   |                     |              |
-   |                     |              mutable borrow occurs here
-   |                     argument requires that `*cur_buffer` is borrowed for `'static`
+warning: associated items `new`, `update_matrix`, `with_size`, `set_size`, `set_str`, and `set_fmt` are never used
+    --> src/video/sprite.rs:1246:8
+     |
+1245 | impl<'a> Text<'a> {
+     | ----------------- associated items in this implementation
+1246 |     fn new(font: &'a Font<'a>, position: Coord2D) -> Self {
+     |        ^^^
 ...
-68 |             pusher.push(cur_buffer, cur_y);
-   |                         ^^^^^^^^^^ immutable borrow occurs here
+1262 |     fn update_matrix(&mut self) {
+     |        ^^^^^^^^^^^^^
+...
+1272 |     fn with_size(self, size: f32) -> Self {
+     |        ^^^^^^^^^
+...
+1283 |     fn set_size(&mut self, size: f32) {
+     |        ^^^^^^^^
+...
+1288 |     fn set_str(&mut self, string: &str) {
+     |        ^^^^^^^
+...
+1293 |     fn set_fmt(&mut self, args: Arguments<'a>) {
+     |        ^^^^^^^
 
-warning: variable `meta_length` is assigned to, but never used
-   --> src/video/sprite.rs:184:13
-    |
-184 |         let mut meta_length: usize = 0;
-    |             ^^^^^^^^^^^^^^^
-    |
-    = note: consider using `_meta_length` instead
+warning: field `depth` is never read
+  --> src/matrix/projection.rs:10:5
+   |
+ 8 | pub struct Projection {
+   |            ---------- field in this struct
+ 9 |     matrix: Matrix,
+10 |     depth: f32,
+   |     ^^^^^
 
-warning: value assigned to `meta_length` is never read
-   --> src/video/sprite.rs:190:13
-    |
-190 |             meta_length += 1;
-    |             ^^^^^^^^^^^^^^^^
-    |
-    = help: maybe it is overwritten before being read?
-    = note: `#[warn(unused_assignments)]` (part of `#[warn(unused)]`) on by default
+warning: use of `async fn` in public traits is discouraged as auto trait bounds cannot be specified
+  --> src/video/pusher.rs:10:5
+   |
+10 |     async fn push(&mut self, buffer: &[u8]);
+   |     ^^^^^
+   |
+   = note: you can suppress this lint if you plan to use the trait only in your own code, or do not care about auto traits like `Send` on the `Future`
+   = note: `#[warn(async_fn_in_trait)]` on by default
+help: you can alternatively desugar to a normal `fn` that returns `impl Future` and add any desired bounds such as `Send`, but these cannot be relaxed without a breaking API change
+   |
+10 -     async fn push(&mut self, buffer: &[u8]);
+10 +     fn push(&mut self, buffer: &[u8]) -> impl std::future::Future<Output = ()> + Send;
+   |
 
-Some errors have detailed explanations: E0499, E0502, E0521, E0599, E0624.
-For more information about an error, try `rustc --explain E0499`.
-warning: `vjr-project` (bin "vjr-project") generated 12 warnings
-error: could not compile `vjr-project` (bin "vjr-project") due to 7 previous errors; 12 warnings emitted
+warning: method `new_2D` should have a snake case name
+  --> src/matrix/projection.rs:18:12
+   |
+18 |     pub fn new_2D(depth: f32) -> Self {
+   |            ^^^^^^ help: convert the identifier to snake case: `new_2_d`
+   |
+   = note: `#[warn(non_snake_case)]` (part of `#[warn(nonstandard_style)]`) on by default
+
+warning: `vjr-project` (bin "vjr-project") generated 14 warnings (run `cargo fix --bin "vjr-project" -p vjr-project` to apply 5 suggestions)
+    Finished `dev` profile [optimized + debuginfo] target(s) in 0.09s

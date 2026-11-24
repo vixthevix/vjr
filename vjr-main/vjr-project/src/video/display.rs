@@ -19,7 +19,7 @@ use embedded_hal_bus::spi::{
     NoDelay,
 };
 
-use embedded_hal_async::spi::SpiDevice as AsyncSpiDevice;
+// use embedded_hal_async::spi::SpiDevice as AsyncSpiDevice;
 
 
 use esp_hal::{
@@ -40,7 +40,7 @@ use esp_hal::{
     },
 };
 
-use core::future::Future;
+// use core::future::Future;
 
 use mipidsi::{
     interface::SpiInterface,

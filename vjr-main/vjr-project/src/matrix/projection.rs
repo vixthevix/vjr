@@ -3,7 +3,7 @@ Projection implementation for graphical pipeline
 */
 
 use crate::matrix::prelude::*;
-use crate::trig::*;
+//use crate::trig::*;
 
 pub struct Projection {
     matrix: Matrix,
