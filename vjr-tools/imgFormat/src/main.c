@@ -18,119 +18,33 @@ This totals 13 uint8_ts, subject to change in the future if needed.
 Because its RGB565, each pixel will consist of 2 uint8_ts. for an uncompressed file, every 2-uint8_t is a pixel value.
 */
 
-#define STB_IMAGE_IMPLEMENTATION
-#include "../../shared/stb_image.h"
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdint.h>
-
-uint16_t convert(uint8_t R, uint8_t G, uint8_t B) {
-    //ratios between max screen RGB values and standard RGB values
-    const float Rk = 0.122;
-    const float Gk = 0.248;
-    const float Bk = 0.122;
-    
-    //apply the ratios
-    float Rtransform = R * Rk;
-    float Gtransform = G * Gk;
-    float Btransform = B * Bk;
-
-    uint16_t result = 0;
-
-    //type casting float -> int -> uint8_t, then bit OR into the result.
-
-    int Rint = (int) Rtransform;
-    uint8_t Rbyte = (uint8_t) Rint;
-    result |= Rbyte;
-    result <<= 6;
-
-    int Gint = (int) Gtransform;
-    uint8_t Gbyte = (uint8_t) Gint;
-    result |= Gbyte;
-    result <<= 5;
-
-    int Bint = (int) Btransform;
-    uint8_t Bbyte = (uint8_t) Bint;
-    result |= Bbyte;
-
-    return result;
-}
-
-
+#include "../../shared/vimg.h"
 
 int main(int argc, char** argv) {
     if (argc <= 1) {
         printf("Please attach the name of the file you wish to convert. Thank you.\n");
         return 1;
     }
-
-    char* fileName = argv[1];
-    printf("fileName: %s\n", fileName);
-
-    //convert image into stream
-    int width, height, channels;
-    uint8_t* imgStream = stbi_load(fileName, &width, &height, &channels, 3); //force into RGB mode, no alpha for now
-    if (!imgStream) {
-        printf("Unable to load file %s, sorry :(\n", fileName);
+    
+    Args args = parse_args(argc, argv);
+    
+    if (!args.input_file || !args.output_file) {
+        printf("Please provide an input name and an output name.\n");
         return 1;
     }
 
-    printf("Image %s loaded, with dimensions %ix%i\n", fileName, width, height);
-    //check if the image is too big, remember that we must fit height and width into 2 uint8_ts each.
-
-    if (width > ((1 << 16) - 1) || height > ((1 << 16) - 1)) {
-        printf("Sorry, this image is too big, it must fit under or equal to %ux%u pixels", (1 << 16) - 1, (1 << 16) - 1);
-        stbi_image_free(imgStream);
+    Vimg vimg = make_vimg(args.input_file);
+    
+    if (vimg.valid && vimg.name && vimg.data) {
+        // Write to file
+        FILE* outputFile = fopen(args.output_file, "wb");
+        fwrite(vimg.data, sizeof(uint8_t), vimg.data_size, outputFile);
+        fclose(outputFile);
+    }
+    else {
+        printf("Could not make VIMG\n");
         return 1;
     }
-
-    //good to go!
-
-    //make the file
-    //get the file name
-    char* outputName = (char*) calloc(strlen(fileName) + 10, sizeof(char));
-    for (int i = 0; fileName[i] != '.' && i < strlen(fileName); i++) {
-        outputName[i] = fileName[i];
-    }
-    strcat(outputName, ".vimg");
-    
-    FILE* output = fopen(outputName, "wb");
-    
-    //writing the header
-    
-    const uint8_t compressionType = 0;
-    fprintf(output, "VIMG");
-    
-    fputc(compressionType, output);
-    
-    fputc((uint8_t)((uint16_t)(width) >> 8), output);
-    fputc((uint8_t)((uint16_t)(width) & 0x00ff), output);
-    
-    fputc((uint8_t)((uint16_t)(height) >> 8), output);
-    fputc((uint8_t)((uint16_t)(height) & 0x00ff), output);
-     
-    fprintf(output, "VIMG");
-    
-    //actual conversion
-    unsigned long imgSize = width * height * 3;
-    for (unsigned long i = 0; i < imgSize;) {
-        uint8_t
-        R = imgStream[i++],
-        G = imgStream[i++],
-        B = imgStream[i++];
-
-        uint16_t colour = convert(R, G, B);
-//      printf("(%u,%u,%u) => 0x%x\n", R,G,B, colour);
-        fputc((uint8_t)(colour >> 8), output);
-        fputc((uint8_t)(colour & 0x00ff), output);
-    }
-
-    //finished
-    printf("Generated image %s. Thank you, and goodbye.\n", outputName);
-    stbi_image_free(imgStream);
-    fclose(output);
-    free(outputName);
 
     return 0;
 }

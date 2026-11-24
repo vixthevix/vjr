@@ -56,16 +56,25 @@ main() {
                 ;;
         esac
     done
-    
+
     if [[ -z "$program" ]]; then
         error "Program not set" 
         guide
         exit 1
     fi
+    
+    local script_dir
+    script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    local tool_run="$script_dir/$program/run"
+
+    if [[ ! -x "$tool_run" ]]; then
+        error "Program '$program' not found or not executable"
+        guide
+        exit 1
+    fi   
 
     echo "[RUNNING] $program"
-    # cd $program && ./run "${prog_args[@]}" && cd ..
-    $program/run "${prog_args[@]}"
+    "$tool_run" "${prog_args[@]}"
 }
 
 main "$@"
