@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BIN="bin"
+EXE="main"
+
+"$SCRIPT_DIR/$BIN/$EXE" "$@"

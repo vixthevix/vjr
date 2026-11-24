@@ -26,20 +26,24 @@ Color convert(uint16_t colour) {
     uint8_t Rbyte = (uint8_t)(colour & 0b11111);
     colour >>= 5;
 
-    uint16_t Rint = (uint16_t)Rbyte;
-    uint16_t Gint = (uint16_t)Gbyte;
-    uint16_t Bint = (uint16_t)Bbyte;
 
-    float RTransform = ((float)Rint) / Rk;
-    float GTransform = ((float)Gint) / Gk;
-    float BTransform = ((float)Bint) / Bk;
+    uint8_t RTransform = (Rbyte) << 3;
+    uint8_t GTransform = (Gbyte) << 2;
+    uint8_t BTransform = (Bbyte) << 3;
 
     Color result = {
-        .r = (uint8_t)RTransform,
-        .g = (uint8_t)GTransform,
-        .b = (uint8_t)BTransform,
+        .r = RTransform,
+        .g = GTransform,
+        .b = BTransform,
         .a = 255
     };
+    
+//    printf(
+//        "Colour:\n"
+//        "\tR = %u\n"
+//        "\tG = %u\n"
+//        "\tB = %u\n"
+//    , result.r, result.g, result.b);
 
     return result;
 }
@@ -113,6 +117,32 @@ int main(int argc, char** argv) {
     //our window dimensions will match the images
     InitWindow(image->width, image->height, fileName);
     SetTargetFPS(60);
+    
+    // Create a buffer to store the image and pass it to Raylib
+    
+    // List of raylib pixels 
+    Color* pixels = (Color*)malloc(image->width * image->height * sizeof(Color));
+    uint8_t* row_buf = (uint8_t*)malloc(image->width * 2);
+
+    for (unsigned long y = 0; y < image->height; y++) {
+        fread(row_buf, 1, image->width * 2, image->file);
+        for (unsigned long x = 0; x < image->width; x++) {
+            uint16_t colour = ((uint16_t)row_buf[x * 2] << 8) | row_buf[x * 2 + 1];
+            pixels[y * image->width + x] = convert(colour);
+        }
+    }
+    free(row_buf);
+
+    // Passing on to raylib
+    Image rlImg = {
+        .data = pixels,
+        .width = image->width,
+        .height = image->height,
+        .mipmaps = 1,
+        .format = PIXELFORMAT_UNCOMPRESSED_R8G8B8A8
+    };
+    Texture2D texture = LoadTextureFromImage(rlImg);
+    free(pixels); 
 
     //draw the image
     //we will read chunks of image->width bytes and display them.
@@ -122,32 +152,17 @@ int main(int argc, char** argv) {
     bool drawn = false;
     while (!WindowShouldClose()) {
 	    BeginDrawing();
-	    
-		if (!drawn) { // Draw once
-			drawn = true;
-			ClearBackground(WHITE);
-			for (unsigned long y = 0; y < image->height; y++) {
-				uint8_t buffer[image->width * 2];
-				fread(buffer, image->width * 2, sizeof(uint8_t), image->file);
-				for (unsigned long x = 0, i = 0; x < image->width; x++) {
-					//every 2 bytes in buffer is a pixel. we must convert to rgb888, and then display it.
-					uint8_t high = buffer[i++], low = buffer[i++];
-					uint16_t colour = ((uint16_t)(high) << 8) | low;
-					Color displayColour = convert(colour);
-					DrawPixel(x, y, displayColour);
-				}
-			}  
-	    }
-
+        ClearBackground(WHITE);
+        DrawTexture(texture, 0, 0, WHITE);
 	    EndDrawing();
     }
-
+    
+    UnloadTexture(texture);
     CloseWindow();
     
     //free everything
     fclose(image->file);
     free(image);
-
 
     return 0;
 }

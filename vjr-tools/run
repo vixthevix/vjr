@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+
+error() {
+    echo
+    echo "[ERROR] $1"
+}
+
+guide() {
+    echo
+    echo "vjr toolkit for project assistance"
+    echo "Run './run -p [PROGRAM] -a [ARGUMENTS]'"
+    echo
+    echo "Progams include:"
+    echo "  imgFormat  - pass in an image to create a VIMG"
+    echo "  imgView    - view a VIMG using raylib"
+    echo "  fontFormat - pass in a fontsheet-image to create VIMG and font metadata"
+    echo
+    echo "Run './run -h' for help"
+    echo
+
+}
+
+main() {
+    local args=("$@")
+    
+    local program
+    local prog_args=()
+
+    local i
+    for ((i = 0; i < "${#args[@]}"; i++)); do
+        case "${args[$i]}" in
+            "-h")
+                guide
+                exit 0
+                ;;
+            "-p")
+                program="${args[$i + 1]}"
+                ((i++))
+                ;;
+            "-a")
+                if [[ -z "$program" ]]; then
+                    error "Program not set before arguments"
+                    guide
+                    exit 1
+                fi
+                # Loop through rest of arguments to add to prog_args
+                ((i++))
+                for ((; i < "${#args[@]}"; i++)); do
+                    prog_args+=("${args[$i]}")
+                done
+                ;;
+            *)
+                error "Invalid argument"
+                guide
+                exit 1
+                ;;
+        esac
+    done
+
+    if [[ -z "$program" ]]; then
+        error "Program not set" 
+        guide
+        exit 1
+    fi
+    
+    local script_dir
+    script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    local tool_run="$script_dir/$program/run"
+
+    if [[ ! -x "$tool_run" ]]; then
+        error "Program '$program' not found or not executable"
+        guide
+        exit 1
+    fi   
+
+    echo "[RUNNING] $program"
+    "$tool_run" "${prog_args[@]}"
+}
+
+main "$@"

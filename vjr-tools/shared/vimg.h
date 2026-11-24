@@ -1,22 +1,6 @@
-/*
-This program will be used to convert any image into a custom format for the vjr.
-It uses the stb_image.h library to convert an image into a raw RGB stream.
-This stream is then converted into RGB565, and then placed intoa  file with a custom header file.
+#ifndef VIMG_GUARD
+#define VIMG_GUARD
 
-This filetype will be called... a V Image, shortened to .vimg, because im very creative, and obviously this is subject to change.
-
-The header looks like so (in uint8_ts):
-    
-    String "VIMG" (4 uint8_ts), for identification and guard
-    Compression type (1 uint8_t), a type of 0 is uncompressed.
-    Full image width, in pixels (2 uint8_ts)
-    Full image height, in pixels (2 uint8_ts)
-    String "VIMG" (4 uint8_ts), guard
-
-
-This totals 13 uint8_ts, subject to change in the future if needed.
-Because its RGB565, each pixel will consist of 2 uint8_ts. for an uncompressed file, every 2-uint8_t is a pixel value.
-*/
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -24,6 +8,45 @@ Because its RGB565, each pixel will consist of 2 uint8_ts. for an uncompressed f
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <stdbool.h>
+
+#include "datavector.h"
+
+
+
+
+
+typedef struct Vimg {
+    char* name;
+    char* data;
+    uint32_t data_size;
+    bool valid;
+} Vimg;
+
+
+typedef struct Args {
+    char* input_file;
+    char* output_file;
+} Args;
+
+Args parse_args(int argc, char** argv) {
+    Args args = { 0 };
+
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "-i") == 0 && (i + 1) < argc) {
+            i++;
+            args.input_file = (char*) calloc(strlen(argv[i]), sizeof(char));
+            strncpy(args.input_file, argv[i], strlen(argv[i]));
+        }
+        else if (strcmp(argv[i], "-o") == 0 && (i + 1) < argc) {
+            i++;
+            args.output_file = (char*) calloc(strlen(argv[i]), sizeof(char));
+            strncpy(args.output_file, argv[i], strlen(argv[i]));
+        }
+    }
+
+    return args;
+}
 
 uint16_t convert(uint8_t R, uint8_t G, uint8_t B) {
     //ratios between max screen RGB values and standard RGB values
@@ -32,9 +55,9 @@ uint16_t convert(uint8_t R, uint8_t G, uint8_t B) {
     const float Bk = 0.122;
     
     //apply the ratios
-    float Rtransform = R * Rk;
-    float Gtransform = G * Gk;
-    float Btransform = B * Bk;
+    uint8_t Rtransform = R >> 3;
+    uint8_t Gtransform = G >> 2;
+    uint8_t Btransform = B >> 3;
 
     uint16_t result = 0;
 
@@ -57,22 +80,20 @@ uint16_t convert(uint8_t R, uint8_t G, uint8_t B) {
     return result;
 }
 
-
-
-int main(int argc, char** argv) {
-    if (argc <= 1) {
-        printf("Please attach the name of the file you wish to convert. Thank you.\n");
-        return 1;
+Vimg make_vimg(char* fileName) {
+    Vimg vimg = { 0 };
+    
+    if (!fileName) {
+        printf("File name is NULL\n");
+        return vimg;
     }
-
-    char* fileName = argv[1];
 
     //convert image into stream
     int width, height, channels;
     uint8_t* imgStream = stbi_load(fileName, &width, &height, &channels, 3); //force into RGB mode, no alpha for now
     if (!imgStream) {
         printf("Unable to load file %s, sorry :(\n", fileName);
-        return 1;
+        return vimg;
     }
 
     printf("Image %s loaded, with dimensions %ix%i\n", fileName, width, height);
@@ -81,7 +102,7 @@ int main(int argc, char** argv) {
     if (width > ((1 << 16) - 1) || height > ((1 << 16) - 1)) {
         printf("Sorry, this image is too big, it must fit under or equal to %ux%u pixels", (1 << 16) - 1, (1 << 16) - 1);
         stbi_image_free(imgStream);
-        return 1;
+        return vimg;
     }
 
     //good to go!
@@ -94,24 +115,22 @@ int main(int argc, char** argv) {
     }
     strcat(outputName, ".vimg");
     
-    FILE* output = fopen(outputName, "wb");
-    
-    //writing the header
-    
     const uint8_t compressionType = 0;
-    fprintf(output, "VIMG");
     
-    fputc(compressionType, output);
+    // Make a character buffer
+    // Use a Vector struct here to make life easier, copy from cottage
+    dataVector v = dataVectorInit(1024);    
+    dataVectorPushString(&v, "VIMG"); 
     
-    fputc((uint8_t)((uint16_t)(width) >> 8), output);
-    fputc((uint8_t)((uint16_t)(width) & 0x00ff), output);
+    dataVectorPush(&v, compressionType); 
     
-    fputc((uint8_t)((uint16_t)(height) >> 8), output);
-    fputc((uint8_t)((uint16_t)(height) & 0x00ff), output);
-     
-    fprintf(output, "VIMG");
+    dataVectorPush(&v, (uint8_t)((uint16_t)(width)  >> 8)); 
+    dataVectorPush(&v, (uint8_t)((uint16_t)(width)  & 0x00ff)); 
+    dataVectorPush(&v, (uint8_t)((uint16_t)(height) >> 8)); 
+    dataVectorPush(&v, (uint8_t)((uint16_t)(height) & 0x00ff)); 
     
-    //actual conversion
+    dataVectorPushString(&v, "VIMG"); 
+    
     unsigned long imgSize = width * height * 3;
     for (unsigned long i = 0; i < imgSize;) {
         uint8_t
@@ -120,17 +139,20 @@ int main(int argc, char** argv) {
         B = imgStream[i++];
 
         uint16_t colour = convert(R, G, B);
-//      printf("(%u,%u,%u) => 0x%x\n", R,G,B, colour);
-        fputc((uint8_t)(colour >> 8), output);
-        fputc((uint8_t)(colour & 0x00ff), output);
+        dataVectorPush(&v, (uint8_t)(colour >> 8));
+        dataVectorPush(&v, (uint8_t)(colour & 0x00ff));
     }
 
     //finished
     printf("Generated image %s. Thank you, and goodbye.\n", outputName);
     stbi_image_free(imgStream);
-    fclose(output);
-    free(outputName);
-
-    return 0;
+    
+    // Wrap it in a Vimg container and return it
+    vimg.data = v.data;
+    vimg.data_size = v.index;
+    vimg.name = outputName;
+    vimg.valid = true;
+    return vimg;
 }
 
+#endif

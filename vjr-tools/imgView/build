@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+BIN="bin"
+SRC="src"
+EXE="main"
+
+gcc $SRC/$EXE.c -o $BIN/$EXE -lraylib -lGL -lm -lpthread -ldl -lrt -lX11
