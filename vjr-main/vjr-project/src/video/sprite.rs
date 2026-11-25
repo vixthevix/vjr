@@ -1226,6 +1226,22 @@ impl<'a> Font<'a> {
             characters,
         }
     }
+
+    pub fn get_glyph_dimensions(&self) -> (u16, u16) {
+        (self.glyph_width, self.glyph_height)
+    }
+    
+    pub fn get_fontsheet(&self) ->  &Image<'a> {
+        &self.fontsheet
+    }
+
+    pub fn get_character(&self, c: u8) -> Option<(usize, usize)> {
+        if c > 95 {
+            return None;
+        }
+
+        Some(self.characters[c as usize])
+    }
 }
 
 
@@ -1312,36 +1328,38 @@ impl<'a> Sprite for Text<'a> {
         
         let mut i: usize = 0;
         let mut cur_coord = self.position;
-        let glyph_width: usize = 0;
-        let glyph_height: usize = 0;
+        let (glyph_width, glyph_height) = self.font.get_glyph_dimensions();
+        let (glyph_width, glyph_height) = (glyph_width as usize, glyph_height as usize);
         for c in self.raw.chars() {
             // Pass c to font to get UV values
-            let (u, v) = (0, 0);
+            let uv = self.font.get_character(c as u8);
             
-            // Transform XY, and store to cache
-            let (x_t, y_t, _) = m.apply_to_vertex(cur_coord.x as f32, cur_coord.y as f32, 0.0);
-            let x: isize = ((x_t + 1.0) * 0.5 * 320.0) as isize; 
-            let y: isize = ((1.0 - y_t) * 0.5 * 240.0) as isize; // Grows downwards
-            cache[i] = (x, y, u, v);
-            i += 1;
-            
-            let (x_t, y_t, _) = m.apply_to_vertex((cur_coord.x + glyph_width as isize) as f32, cur_coord.y as f32, 0.0);
-            let x: isize = ((x_t + 1.0) * 0.5 * 320.0) as isize; 
-            let y: isize = ((1.0 - y_t) * 0.5 * 240.0) as isize; // Grows downwards
-            cache[i] = (x, y, u + glyph_width, v);
-            i += 1;
-            
-            let (x_t, y_t, _) = m.apply_to_vertex(cur_coord.x as f32, (cur_coord.y + glyph_height as isize) as f32, 0.0);
-            let x: isize = ((x_t + 1.0) * 0.5 * 320.0) as isize; 
-            let y: isize = ((1.0 - y_t) * 0.5 * 240.0) as isize; // Grows downwards
-            cache[i] = (x, y, u, v + glyph_height);
-            i += 1;
+            if let Some((u, v)) = uv {
+                // Transform XY, and store to cache
+                let (x_t, y_t, _) = m.apply_to_vertex(cur_coord.x as f32, cur_coord.y as f32, 0.0);
+                let x: isize = ((x_t + 1.0) * 0.5 * 320.0) as isize; 
+                let y: isize = ((1.0 - y_t) * 0.5 * 240.0) as isize; // Grows downwards
+                cache[i] = (x, y, u, v);
+                i += 1;
+                
+                let (x_t, y_t, _) = m.apply_to_vertex((cur_coord.x + glyph_width as isize) as f32, cur_coord.y as f32, 0.0);
+                let x: isize = ((x_t + 1.0) * 0.5 * 320.0) as isize; 
+                let y: isize = ((1.0 - y_t) * 0.5 * 240.0) as isize; // Grows downwards
+                cache[i] = (x, y, u + glyph_width, v);
+                i += 1;
+                
+                let (x_t, y_t, _) = m.apply_to_vertex(cur_coord.x as f32, (cur_coord.y + glyph_height as isize) as f32, 0.0);
+                let x: isize = ((x_t + 1.0) * 0.5 * 320.0) as isize; 
+                let y: isize = ((1.0 - y_t) * 0.5 * 240.0) as isize; // Grows downwards
+                cache[i] = (x, y, u, v + glyph_height);
+                i += 1;
 
-            let (x_t, y_t, _) = m.apply_to_vertex((cur_coord.x + glyph_width as isize) as f32, (cur_coord.y + glyph_height as isize) as f32, 0.0);
-            let x: isize = ((x_t + 1.0) * 0.5 * 320.0) as isize; 
-            let y: isize = ((1.0 - y_t) * 0.5 * 240.0) as isize; // Grows downwards
-            cache[i] = (x, y, u + glyph_width, v + glyph_height);
-            i += 1;
+                let (x_t, y_t, _) = m.apply_to_vertex((cur_coord.x + glyph_width as isize) as f32, (cur_coord.y + glyph_height as isize) as f32, 0.0);
+                let x: isize = ((x_t + 1.0) * 0.5 * 320.0) as isize; 
+                let y: isize = ((1.0 - y_t) * 0.5 * 240.0) as isize; // Grows downwards
+                cache[i] = (x, y, u + glyph_width, v + glyph_height);
+                i += 1;
+            }
 
             // Increment XY as necessary
             match c {
@@ -1358,11 +1376,22 @@ impl<'a> Sprite for Text<'a> {
     }
 
     fn draw(&self, vertices: &[(isize, isize, usize, usize); SPRITE_CACHE_MAX], buffer: & mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16) {
-        // Draw, according to texture
-        
-        let p1 = vertices[0];
-        let p2 = vertices[1];
-        let p3 = vertices[2];
+        // Loop per character in the string
+        // Should use enumerate to get character and index to check if newline
+        let mut index: usize = 0;
+        for (i, c) in self.raw.chars().enumerate() {
+            if c == '\n' { continue; }
+
+            let p1 = vertices[(index * 4) + 0];
+            let p2 = vertices[(index * 4) + 1];
+            let p3 = vertices[(index * 4) + 2];
+            let p4 = vertices[(index * 4) + 3];
+
+            triangle_texture(p1, p2, p3, self.font.get_fontsheet(), buffer, y_offset);
+            triangle_texture(p4, p2, p3, self.font.get_fontsheet(), buffer, y_offset);
+            
+            index += 1;
+        }
     }
 
 }
