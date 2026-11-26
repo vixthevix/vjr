@@ -134,7 +134,15 @@ impl Matrix {
         else {
             (out_x, out_y, out_z)
         }
-
+    }
+    
+    pub fn apply_to_vertex_2d(&self, x: f32, y: f32) -> (i16, i16) {
+        let (x_t, y_t, _) = self.apply_to_vertex(x, y, 0.0);
+        // Mapped to [-1, 1], so return to ([0, 360], [0, 240])
+        let x: i16 = ((x_t + 1.0) * 0.5 * 320.0) as i16; 
+        let y: i16 = ((1.0 - y_t) * 0.5 * 240.0) as i16; // Grows downwards
+        
+        (x, y)
     }
 }
 

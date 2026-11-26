@@ -1,42 +1,24 @@
-warning: unused variable: `buffer`
-    --> src/video/sprite.rs:1360:81
+   Compiling vjr-project v0.1.0 (/home/vixthevix/Documents/code/personal/vjr/vjr-main/vjr-project)
+warning: unused variable: `i`
+    --> src/video/sprite.rs:1382:14
      |
-1360 | ...E_CACHE_MAX], buffer: & mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16) {
-     |                  ^^^^^^ help: if this is intentional, prefix it with an underscore: `_buffer`
+1382 |         for (i, c) in self.raw.chars().enumerate() {
+     |              ^ help: if this is intentional, prefix it with an underscore: `_i`
      |
      = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
 
-warning: unused variable: `y_offset`
-    --> src/video/sprite.rs:1360:122
+warning: type `Image<'a>` is more private than the item `sprite::Font::<'a>::get_fontsheet`
+    --> src/video/sprite.rs:1234:5
      |
-1360 | ...FFER_SIZE], y_offset: u16) {
-     |                ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_y_offset`
-
-warning: unused variable: `p1`
-    --> src/video/sprite.rs:1363:13
+1234 |     pub fn get_fontsheet(&self) ->  &Image<'a> {
+     |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ method `sprite::Font::<'a>::get_fontsheet` is reachable at visibility `pub`
      |
-1363 |         let p1 = vertices[0];
-     |             ^^ help: if this is intentional, prefix it with an underscore: `_p1`
-
-warning: unused variable: `p2`
-    --> src/video/sprite.rs:1364:13
+note: but type `Image<'a>` is only usable at visibility `pub(self)`
+    --> src/video/sprite.rs:467:1
      |
-1364 |         let p2 = vertices[1];
-     |             ^^ help: if this is intentional, prefix it with an underscore: `_p2`
-
-warning: unused variable: `p3`
-    --> src/video/sprite.rs:1365:13
-     |
-1365 |         let p3 = vertices[2];
-     |             ^^ help: if this is intentional, prefix it with an underscore: `_p3`
-
-warning: constant `VFONT` is never used
-   --> src/main.rs:154:7
-    |
-154 | const VFONT     : &[u8] = include_bytes!("../files/fonts/v-font-small.vfont");
-    |       ^^^^^
-    |
-    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+ 467 | struct Image<'a> {
+     | ^^^^^^^^^^^^^^^^
+     = note: `#[warn(private_interfaces)]` on by default
 
 warning: fields `compression` and `meta` are never read
    --> src/video/sprite.rs:470:9
@@ -51,6 +33,7 @@ warning: fields `compression` and `meta` are never read
     |         ^^^^
     |
     = note: `Image` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
 
 warning: fields `centroid`, `width`, and `height` are never read
    --> src/video/sprite.rs:989:5
@@ -66,57 +49,6 @@ warning: fields `centroid`, `width`, and `height` are never read
 992 |     height: f32,
     |     ^^^^^^
 
-warning: fields `fontsheet`, `glyph_width`, `glyph_height`, and `characters` are never read
-    --> src/video/sprite.rs:1163:5
-     |
-1162 | pub struct Font<'a> {
-     |            ---- fields in this struct
-1163 |     fontsheet: Image<'a>,
-     |     ^^^^^^^^^
-1164 |     glyph_width: u16,
-     |     ^^^^^^^^^^^
-1165 |     glyph_height: u16,
-     |     ^^^^^^^^^^^^
-1166 |     characters: [(usize, usize); 95],
-     |     ^^^^^^^^^^
-
-warning: fields `font`, `size`, and `rotation` are never read
-    --> src/video/sprite.rs:1236:5
-     |
-1233 | pub struct Text<'a> {
-     |            ---- fields in this struct
-...
-1236 |     font: &'a Font<'a>,
-     |     ^^^^
-1237 |     size: f32,
-     |     ^^^^
-1238 |     position: Coord2D,
-1239 |     rotation: usize,
-     |     ^^^^^^^^
-
-warning: associated items `new`, `update_matrix`, `with_size`, `set_size`, `set_str`, and `set_fmt` are never used
-    --> src/video/sprite.rs:1246:8
-     |
-1245 | impl<'a> Text<'a> {
-     | ----------------- associated items in this implementation
-1246 |     fn new(font: &'a Font<'a>, position: Coord2D) -> Self {
-     |        ^^^
-...
-1262 |     fn update_matrix(&mut self) {
-     |        ^^^^^^^^^^^^^
-...
-1272 |     fn with_size(self, size: f32) -> Self {
-     |        ^^^^^^^^^
-...
-1283 |     fn set_size(&mut self, size: f32) {
-     |        ^^^^^^^^
-...
-1288 |     fn set_str(&mut self, string: &str) {
-     |        ^^^^^^^
-...
-1293 |     fn set_fmt(&mut self, args: Arguments<'a>) {
-     |        ^^^^^^^
-
 warning: field `depth` is never read
   --> src/matrix/projection.rs:10:5
    |
@@ -126,20 +58,6 @@ warning: field `depth` is never read
 10 |     depth: f32,
    |     ^^^^^
 
-warning: use of `async fn` in public traits is discouraged as auto trait bounds cannot be specified
-  --> src/video/pusher.rs:10:5
-   |
-10 |     async fn push(&mut self, buffer: &[u8]);
-   |     ^^^^^
-   |
-   = note: you can suppress this lint if you plan to use the trait only in your own code, or do not care about auto traits like `Send` on the `Future`
-   = note: `#[warn(async_fn_in_trait)]` on by default
-help: you can alternatively desugar to a normal `fn` that returns `impl Future` and add any desired bounds such as `Send`, but these cannot be relaxed without a breaking API change
-   |
-10 -     async fn push(&mut self, buffer: &[u8]);
-10 +     fn push(&mut self, buffer: &[u8]) -> impl std::future::Future<Output = ()> + Send;
-   |
-
 warning: method `new_2D` should have a snake case name
   --> src/matrix/projection.rs:18:12
    |
@@ -148,5 +66,13 @@ warning: method `new_2D` should have a snake case name
    |
    = note: `#[warn(non_snake_case)]` (part of `#[warn(nonstandard_style)]`) on by default
 
-warning: `vjr-project` (bin "vjr-project") generated 14 warnings (run `cargo fix --bin "vjr-project" -p vjr-project` to apply 5 suggestions)
-    Finished `dev` profile [optimized + debuginfo] target(s) in 0.09s
+error: linking with `xtensa-esp32-elf-gcc` failed: exit status: 1
+  |
+  = note:  "xtensa-esp32-elf-gcc" "<1 object files omitted>" "-Wl,--as-needed" "-Wl,-Bstatic" "/home/vixthevix/Documents/code/personal/vjr/vjr-main/vjr-project/target/xtensa-esp32-none-elf/release/deps/rustcnZi3Lc/libesp_rom_sys-7db1b11d4b7115e5.rlib" "/home/vixthevix/Documents/code/personal/vjr/vjr-main/vjr-project/target/xtensa-esp32-none-elf/release/deps/libcompiler_builtins-bb3bb232a3ba41eb.rlib" "-Wl,-Bdynamic" "-lesp_rom_sys" "-L" "/home/vixthevix/Documents/code/personal/vjr/vjr-main/vjr-project/target/xtensa-esp32-none-elf/release/deps/rustcnZi3Lc/raw-dylibs" "-Wl,--eh-frame-hdr" "-Wl,-z,noexecstack" "-L" "/home/vixthevix/Documents/code/personal/vjr/vjr-main/vjr-project/target/xtensa-esp32-none-elf/release/build/esp-rom-sys-bd3ca9b54d20f663/out" "-L" "/home/vixthevix/Documents/code/personal/vjr/vjr-main/vjr-project/target/xtensa-esp32-none-elf/release/build/esp32-75e8fc5109a0834c/out" "-L" "/home/vixthevix/Documents/code/personal/vjr/vjr-main/vjr-project/target/xtensa-esp32-none-elf/release/build/esp-hal-7e90c48a4abab0f9/out" "-L" "/home/vixthevix/Documents/code/personal/vjr/vjr-main/vjr-project/target/xtensa-esp32-none-elf/release/build/xtensa-lx-rt-0bd0e1a66607fef0/out" "-L" "/home/vixthevix/Documents/code/personal/vjr/vjr-main/vjr-project/target/xtensa-esp32-none-elf/release/build/esp-radio-387428489614aabf/out" "-L" "/home/vixthevix/Documents/code/personal/vjr/vjr-main/vjr-project/target/xtensa-esp32-none-elf/release/build/esp-phy-a1e694a63116e22d/out" "-L" "/home/vixthevix/Documents/code/personal/vjr/vjr-main/vjr-project/target/xtensa-esp32-none-elf/release/build/esp-wifi-sys-esp32-bd10bb91a0114c96/out" "-o" "/home/vixthevix/Documents/code/personal/vjr/vjr-main/vjr-project/target/xtensa-esp32-none-elf/release/deps/vjr_project-240f3dcda386d0cf" "-Wl,--gc-sections" "-no-pie" "-Wl,--strip-all" "-nodefaultlibs" "-nostartfiles" "-Wl,--error-handling-script=/home/vixthevix/Documents/code/personal/vjr/vjr-main/vjr-project/target/release/build/vjr-project-15b9aa14c0d94f2f/build-script-build" "-Tlinkall.x"
+  = note: some arguments are omitted. use `--verbose` to show all linker arguments
+  = note: /home/vixthevix/.rustup/toolchains/esp/xtensa-esp-elf/esp-15.2.0_20250920/xtensa-esp-elf/bin/../lib/gcc/xtensa-esp-elf/15.2.0/../../../../xtensa-esp-elf/bin/ld:stack.x:13 cannot move location counter backwards (from 3fff9aac to 3ffe0000)
+          collect2: error: ld returned 1 exit status
+          
+
+warning: `vjr-project` (bin "vjr-project") generated 6 warnings
+error: could not compile `vjr-project` (bin "vjr-project") due to 1 previous error; 6 warnings emitted

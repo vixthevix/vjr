@@ -48,19 +48,19 @@ Base trait for all sprites that can be drawn to the screen.
 */
 pub const SPRITE_CACHE_MAX: usize = N_MAX as usize * 4;
 pub trait Sprite {
-    fn gen_vertices(&self, cache: &mut [(isize, isize, usize, usize); SPRITE_CACHE_MAX], setup_matrix: &Matrix);
-    fn draw(&self, vertices: &[(isize, isize, usize, usize); SPRITE_CACHE_MAX], buffer: &mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16);
+    fn gen_vertices(&self, cache: &mut [(i16, i16, u16, u16); SPRITE_CACHE_MAX], setup_matrix: &Matrix);
+    fn draw(&self, vertices: &[(i16, i16, u16, u16); SPRITE_CACHE_MAX], buffer: &mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16);
 }
 
 /*
 Default function for drawing a line between two points, using Bresenham's algorithm
 */
-fn line_draw(p1: (isize, isize), p2: (isize, isize), outline: &[u8; 2], buffer: &mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16) {
+fn line_draw(p1: (i16, i16), p2: (i16, i16), outline: &[u8; 2], buffer: &mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16) {
     // Check bounds
-    let x1: isize = 0;
-    let y1: isize = y_offset as isize;
-    let x2: isize = DISPLAY_BUFFER_WIDTH as isize;
-    let y2: isize = y_offset as isize + DISPLAY_BUFFER_HEIGHT as isize;
+    let x1: i16 = 0;
+    let y1: i16 = y_offset as i16;
+    let x2: i16 = DISPLAY_BUFFER_WIDTH as i16;
+    let y2: i16 = y_offset as i16 + DISPLAY_BUFFER_HEIGHT as i16;
 
     // If both points (in the same row) out of scope, no line to be drawn
     if p1.1 < y1 && p2.1 < y1 || p1.1 > y2 && p2.1 > y2 { return; }
@@ -95,10 +95,10 @@ fn line_draw(p1: (isize, isize), p2: (isize, isize), outline: &[u8; 2], buffer: 
             // We can draw here.
             // x does not change, but y is offsetted back.
             let px_x = x_t;
-            let px_y = y_t - y_offset as isize;
+            let px_y = y_t - y_offset as i16;
 
             // Buffer is 1D, and each px is two bytes.
-            let index: usize = ((px_x + (DISPLAY_BUFFER_WIDTH as isize * px_y)) * 2) as usize;
+            let index: usize = ((px_x + (DISPLAY_BUFFER_WIDTH as i16 * px_y)) * 2) as usize;
 
             buffer[index]     = outline[0];
             buffer[index + 1] = outline[1];
@@ -108,24 +108,24 @@ fn line_draw(p1: (isize, isize), p2: (isize, isize), outline: &[u8; 2], buffer: 
         ierror += 2 * (by - ay).abs();
         
         // Branchless updates for y (adding/subtracting 1) and error (taking into account x)
-        y      += (if by > ay { 1 } else { -1 }) * (ierror > (bx - ax)) as isize;
-        ierror -= (2 * (bx - ax))                * (ierror > (bx - ax)) as isize;
+        y      += (if by > ay { 1 } else { -1 }) * (ierror > (bx - ax)) as i16;
+        ierror -= (2 * (bx - ax))                * (ierror > (bx - ax)) as i16;
     }
 }
 
 /*
 Default function for filling in a triangle with a colour
 */
-fn triangle_fill(p1: (isize, isize), p2: (isize, isize), p3: (isize, isize), fill: &[u8; 2], buffer: &mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16) {
+fn triangle_fill(p1: (i16, i16), p2: (i16, i16), p3: (i16, i16), fill: &[u8; 2], buffer: &mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16) {
     // Check bounds
-    let x1: isize = 0;
-    let y1: isize = y_offset as isize;
-    let x2: isize = DISPLAY_BUFFER_WIDTH as isize;
-    let y2: isize = y_offset as isize + DISPLAY_BUFFER_HEIGHT as isize;
+    let x1: i16 = 0;
+    let y1: i16 = y_offset as i16;
+    let x2: i16 = DISPLAY_BUFFER_WIDTH as i16;
+    let y2: i16 = y_offset as i16 + DISPLAY_BUFFER_HEIGHT as i16;
 
-    let mut a = Coord2D::new(p1.0, p1.1);
-    let mut b = Coord2D::new(p2.0, p2.1);
-    let mut c = Coord2D::new(p3.0, p3.1);
+    let mut a = Coord2D::new(p1.0.into(), p1.1.into());
+    let mut b = Coord2D::new(p2.0.into(), p2.1.into());
+    let mut c = Coord2D::new(p3.0.into(), p3.1.into());
     
     // If all points are out of range, we do not fill.
     if a.y < y1 && b.y < y1 && c.y < y1 || a.y >= y2 && b.y >= y2 && c.y >= y2 { return; }
@@ -157,8 +157,8 @@ fn triangle_fill(p1: (isize, isize), p2: (isize, isize), p3: (isize, isize), fil
             let x_start = x_min.max(x1);
             let x_end   = x_max.min(x2);
             
-            let px_y = y - y_offset as isize;
-            let px_offset = DISPLAY_BUFFER_WIDTH as isize * px_y;
+            let px_y = y - y_offset as i16;
+            let px_offset = DISPLAY_BUFFER_WIDTH as i16 * px_y;
 
             // Perform draw
             for x in x_start..x_end {
@@ -198,8 +198,8 @@ fn triangle_fill(p1: (isize, isize), p2: (isize, isize), p3: (isize, isize), fil
             let x_start = x_min.max(x1);
             let x_end   = x_max.min(x2);
 
-            let px_y = y - y_offset as isize;
-            let px_offset = DISPLAY_BUFFER_WIDTH as isize * px_y;
+            let px_y = y - y_offset as i16;
+            let px_offset = DISPLAY_BUFFER_WIDTH as i16 * px_y;
 
             // Perform draw
             for x in x_start..x_end {
@@ -221,17 +221,17 @@ fn triangle_fill(p1: (isize, isize), p2: (isize, isize), p3: (isize, isize), fil
 /*
 Default function for filling in a triangle with an image texture
 */
-fn triangle_texture(p1: (isize, isize, usize, usize), p2: (isize, isize, usize, usize), p3: (isize, isize, usize, usize), image: &Image, buffer: &mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16) {
+fn triangle_texture(p1: (i16, i16, u16, u16), p2: (i16, i16, u16, u16), p3: (i16, i16, u16, u16), image: &Image, buffer: &mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16) {
     // Check bounds
-    let x1: isize = 0;
-    let y1: isize = y_offset as isize;
-    let x2: isize = DISPLAY_BUFFER_WIDTH as isize;
-    let y2: isize = y_offset as isize + DISPLAY_BUFFER_HEIGHT as isize;
+    let x1: i16 = 0;
+    let y1: i16 = y_offset as i16;
+    let x2: i16 = DISPLAY_BUFFER_WIDTH as i16;
+    let y2: i16 = y_offset as i16 + DISPLAY_BUFFER_HEIGHT as i16;
     
     // Cast texture coords to isize
-    let t1 = (p1.2 as isize, p1.3 as isize);
-    let t2 = (p2.2 as isize, p2.3 as isize);
-    let t3 = (p3.2 as isize, p3.3 as isize);
+    let t1 = (p1.2 as i16, p1.3 as i16);
+    let t2 = (p2.2 as i16, p2.3 as i16);
+    let t3 = (p3.2 as i16, p3.3 as i16);
 
     let mut a = (Coord2D::new(p1.0, p1.1), t1);
     let mut b = (Coord2D::new(p2.0, p2.1), t2);
@@ -256,13 +256,13 @@ fn triangle_texture(p1: (isize, isize, usize, usize), p2: (isize, isize, usize, 
         let segment_height = b.0.y - a.0.y; // From center line to bottom
         
         // Clamp y to row buffer border
-        let y_start = a.0.y.max(y1);
-        let y_end   = b.0.y.min(y2);
+        let y_start = a.0.y.max(y1) as i16;
+        let y_end   = b.0.y.min(y2) as i16;
 
         // Draw horizontal lines with each y
         for y in y_start..y_end {
             // Get coordinate and texture lines for each edge
-            let y_diff = y - a.0.y;
+            let y_diff: i16 = (y - a.0.y) as i16;
 
             // a -> c line
             let x_ac = a.0.x + ((c.0.x - a.0.x) * y_diff) / total_height;  
@@ -277,19 +277,19 @@ fn triangle_texture(p1: (isize, isize, usize, usize), p2: (isize, isize, usize, 
             
             // Determine min and max
             let (x_min, x_max, u_min, u_max, v_min, v_max) = if x_ac < x_ab {
-                (x_ac, x_ab, u_ac, u_ab, v_ac, v_ab)
+                (x_ac, x_ab, u_ac as u32, u_ab as u32, v_ac as u32, v_ab as u32)
             }
             else {
-                (x_ab, x_ac, u_ab, u_ac, v_ab, v_ac)
+                (x_ab, x_ac, u_ab as u32, u_ac as u32, v_ab as u32, v_ac as u32)
             };
             
             // To navigate texture, calculate gradient of U and V lines with respect to x
             // Since integer division, use bit shifting to account for errors
             
-            let dx = x_max - x_min;
+            let dx = (x_max - x_min) as i32;
 
-            let du_dx = if dx > 0 { ((u_max - u_min) << 16) / dx } else { 0 };
-            let dv_dx = if dx > 0 { ((v_max - v_min) << 16) / dx } else { 0 };
+            let du_dx = if dx > 0 { ((u_max - u_min) << 16) as i32 / dx } else { 0 };
+            let dv_dx = if dx > 0 { ((v_max - v_min) << 16) as i32 / dx } else { 0 };
             
             // UV trackers, incremented by d/dx, with shifting taken into account for correction
             let mut u_cur = u_min << 16;
@@ -299,8 +299,8 @@ fn triangle_texture(p1: (isize, isize, usize, usize), p2: (isize, isize, usize, 
             let x_start = x_min.max(x1);
             let x_end   = x_max.min(x2);
 
-            let px_y = y - y_offset as isize;
-            let px_offset = DISPLAY_BUFFER_WIDTH as isize * px_y;
+            let px_y = y - y_offset as i16;
+            let px_offset = DISPLAY_BUFFER_WIDTH as i16 * px_y;
 
             // Perform draw
             for x in x_start..x_end {
@@ -325,8 +325,8 @@ fn triangle_texture(p1: (isize, isize, usize, usize), p2: (isize, isize, usize, 
                 buffer[index + 1] = texture[tex_index + 1];
 
                 // Increment current UV
-                u_cur += du_dx;
-                v_cur += dv_dx;
+                u_cur += du_dx as u32;
+                v_cur += dv_dx as u32;
             }
         }
     }
@@ -355,19 +355,19 @@ fn triangle_texture(p1: (isize, isize, usize, usize), p2: (isize, isize, usize, 
             
             // Determine min and max
             let (x_min, x_max, u_min, u_max, v_min, v_max) = if x_ac < x_bc {
-                (x_ac, x_bc, u_ac, u_bc, v_ac, v_bc)
+                (x_ac, x_bc, u_ac as u32, u_bc as u32, v_ac as u32, v_bc as u32)
             }
             else {
-                (x_bc, x_ac, u_bc, u_ac, v_bc, v_ac)
+                (x_bc, x_ac, u_bc as u32, u_ac as u32, v_bc as u32, v_ac as u32)
             };
             
             // To navigate texture, calculate gradient of U and V lines with respect to x
             // Since integer division, use bit shifting to account for errors
             
-            let dx = x_max - x_min;
+            let dx = (x_max - x_min) as i32;
 
-            let du_dx = if dx > 0 { ((u_max - u_min) << 16) / dx } else { 0 };
-            let dv_dx = if dx > 0 { ((v_max - v_min) << 16) / dx } else { 0 };
+            let du_dx = if dx > 0 { ((u_max - u_min) << 16) as i32 / dx } else { 0 };
+            let dv_dx = if dx > 0 { ((v_max - v_min) << 16) as i32 / dx } else { 0 };
             
             // UV trackers, incremented by d/dx, with shifting taken into account for correction
             let mut u_cur = u_min << 16;
@@ -377,8 +377,8 @@ fn triangle_texture(p1: (isize, isize, usize, usize), p2: (isize, isize, usize, 
             let x_start = x_min.max(x1);
             let x_end   = x_max.min(x2);
 
-            let px_y = y - y_offset as isize;
-            let px_offset = DISPLAY_BUFFER_WIDTH as isize * px_y;
+            let px_y = y - y_offset as i16;
+            let px_offset = DISPLAY_BUFFER_WIDTH as i16 * px_y;
 
             // Perform draw
             for x in x_start..x_end {
@@ -403,8 +403,8 @@ fn triangle_texture(p1: (isize, isize, usize, usize), p2: (isize, isize, usize, 
                 buffer[index + 1] = texture[tex_index + 1];
 
                 // Increment current UV
-                u_cur += du_dx;
-                v_cur += dv_dx;
+                u_cur += du_dx as u32;
+                v_cur += dv_dx as u32;
             }
         }
     }
@@ -415,12 +415,12 @@ fn triangle_texture(p1: (isize, isize, usize, usize), p2: (isize, isize, usize, 
 */
 #[derive(Copy, Clone, Debug)]
 pub struct Coord2D {
-    pub x: isize,
-    pub y: isize,
+    pub x: i16,
+    pub y: i16,
 }
 
 impl Coord2D {
-    pub fn new(x: isize, y: isize) -> Self {
+    pub fn new(x: i16, y: i16) -> Self {
         Self { x, y }
     }
 }
@@ -429,13 +429,13 @@ impl Coord2D {
 3D Coordinate struct
 */
 pub struct Coord3D {
-    pub x: isize,
-    pub y: isize,
-    pub z: isize,
+    pub x: i16,
+    pub y: i16,
+    pub z: i16,
 } 
 
 impl Coord3D {
-    pub fn new(x: isize, y: isize, z: isize) -> Self {
+    pub fn new(x: i16, y: i16, z: i16) -> Self {
         Self { x, y, z }
     }
 }
@@ -654,41 +654,35 @@ impl<'a> Ngon<'a> {
 }
 
 impl<'a> Sprite for Ngon<'a> {
-    fn gen_vertices(&self, cache: &mut [(isize, isize, usize, usize); SPRITE_CACHE_MAX], setup_matrix: &Matrix) {
+    fn gen_vertices(&self, cache: &mut [(i16, i16, u16, u16); SPRITE_CACHE_MAX], setup_matrix: &Matrix) {
         let m = Matrix::mult_matrices(&setup_matrix, &self.matrix); 
         let mut i = 0;
         
         // Let the first vertex be the center of the screen
-        let (cx_t, cy_t, _) = m.apply_to_vertex(0.0, 0.0, 0.0);
-        let screen_cx = ((cx_t + 1.0) * 0.5 * 320.0) as isize;
-        let screen_cy = ((1.0 - cy_t) * 0.5 * 240.0) as isize;
+        let (cx, cy) = m.apply_to_vertex_2d(0.0, 0.0);
 
-        let mut u: usize = 0;
-        let mut v: usize = 0;
+        let mut u: u16 = 0;
+        let mut v: u16 = 0;
         if let Some(Texture::Image(image)) = &self.texture {
-            u = image.width  as usize / 2;
-            v = image.height as usize / 2; 
+            u = image.width  as u16 / 2;
+            v = image.height as u16 / 2; 
         }
 
-        let c = (screen_cx, screen_cy, u, v);
+        let c = (cx, cy, u, v);
         cache[0] = c;
         i += 1;
         
         // rest of vertices
         for vertex in &self.vertices {
-            let (x_t, y_t, _) = m.apply_to_vertex(vertex.x, vertex.y, 0.0);
-
-            // Mapped to [-1, 1], so return to ([0, 360], [0, 240])
-            let x: isize = ((x_t + 1.0) * 0.5 * 320.0) as isize; 
-            let y: isize = ((1.0 - y_t) * 0.5 * 240.0) as isize; // Grows downwards
+            let (x, y) = m.apply_to_vertex_2d(vertex.x, vertex.y);
             
-            let mut u: usize = 0;
-            let mut v: usize = 0;
+            let mut u: u16 = 0;
+            let mut v: u16 = 0;
 
             if let Some(Texture::Image(image)) = &self.texture {
                 // Mapped to [0.0, 1.0], so return to ([0, IMAGE_WIDTH], [0, IMAGE_HEIGHT])
-                u = (vertex.u * image.width as f32) as usize; 
-                v = (vertex.v * image.height as f32) as usize; 
+                u = (vertex.u * image.width  as f32) as u16; 
+                v = (vertex.v * image.height as f32) as u16; 
             }
             
             cache[i] = (x, y, u, v);
@@ -696,7 +690,7 @@ impl<'a> Sprite for Ngon<'a> {
         }
     }
 
-    fn draw(&self, vertices: &[(isize, isize, usize, usize); SPRITE_CACHE_MAX], buffer: &mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16) {
+    fn draw(&self, vertices: &[(i16, i16, u16, u16); SPRITE_CACHE_MAX], buffer: &mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16) {
         // let m = Matrix::mult_matrices(&setup_matrix, &self.matrix); 
         
         let c = vertices[0];
@@ -805,7 +799,7 @@ impl<'a> Triangle<'a> {
 
         let original = Coord2D {
             x: 0,
-            y: 0 - radius as isize,
+            y: 0 - radius as i16,
         };
 
         let p1 = Coord2D {
@@ -814,8 +808,8 @@ impl<'a> Triangle<'a> {
         };
 
         let original = Coord2D {
-            x: ((original.x as f32 * -0.5)  - (original.y as f32 * 0.866)) as isize,
-            y: ((original.x as f32 * 0.866) + (original.y as f32 * -0.5))  as isize,
+            x: ((original.x as f32 * -0.5)  - (original.y as f32 * 0.866)) as i16,
+            y: ((original.x as f32 * 0.866) + (original.y as f32 * -0.5))  as i16,
         };
 
         let p2 = Coord2D {
@@ -824,8 +818,8 @@ impl<'a> Triangle<'a> {
         };
 
         let original = Coord2D {
-            x: ((original.x as f32 * -0.5)  - (original.y as f32 * 0.866)) as isize,
-            y: ((original.x as f32 * 0.866) + (original.y as f32 * -0.5))  as isize,
+            x: ((original.x as f32 * -0.5)  - (original.y as f32 * 0.866)) as i16,
+            y: ((original.x as f32 * 0.866) + (original.y as f32 * -0.5))  as i16,
         };
 
         let p3 = Coord2D {
@@ -920,25 +914,16 @@ impl<'a> Triangle<'a> {
 }
 
 impl<'a> Sprite for Triangle<'a> {
-    fn gen_vertices(&self, cache: &mut [(isize, isize, usize, usize); SPRITE_CACHE_MAX], setup_matrix: &Matrix) {
+    fn gen_vertices(&self, cache: &mut [(i16, i16, u16, u16); SPRITE_CACHE_MAX], setup_matrix: &Matrix) {
         let m = Matrix::mult_matrices(&setup_matrix, &self.matrix); 
         
-        let (x_t, y_t, _) = m.apply_to_vertex(self.p1.0, self.p1.1, 0.0);
-        // Mapped to [-1, 1], so return to ([0, 360], [0, 240])
-        let x: isize = ((x_t + 1.0) * 0.5 * 320.0) as isize; 
-        let y: isize = ((1.0 - y_t) * 0.5 * 240.0) as isize; // Grows downwards
+        let (x, y) = m.apply_to_vertex_2d(self.p1.0, self.p1.1);
         let p1 = Coord2D::new(x, y);
         
-        let (x_t, y_t, _) = m.apply_to_vertex(self.p2.0, self.p2.1, 0.0);
-        // Mapped to [-1, 1], so return to ([0, 360], [0, 240])
-        let x: isize = ((x_t + 1.0) * 0.5 * 320.0) as isize; 
-        let y: isize = ((1.0 - y_t) * 0.5 * 240.0) as isize; // Grows downwards
+        let (x, y) = m.apply_to_vertex_2d(self.p2.0, self.p2.1);
         let p2 = Coord2D::new(x, y);
 
-        let (x_t, y_t, _) = m.apply_to_vertex(self.p3.0, self.p3.1, 0.0);
-        // Mapped to [-1, 1], so return to ([0, 360], [0, 240])
-        let x: isize = ((x_t + 1.0) * 0.5 * 320.0) as isize; 
-        let y: isize = ((1.0 - y_t) * 0.5 * 240.0) as isize; // Grows downwards
+        let (x, y) = m.apply_to_vertex_2d(self.p3.0, self.p3.1);
         let p3 = Coord2D::new(x, y);
         
         cache[0] = (p1.x, p1.y, 0, 0);
@@ -946,7 +931,7 @@ impl<'a> Sprite for Triangle<'a> {
         cache[2] = (p3.x, p3.y, 0, 0);
     }
 
-    fn draw(&self, vertices: &[(isize, isize, usize, usize); SPRITE_CACHE_MAX], buffer: & mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16) {
+    fn draw(&self, vertices: &[(i16, i16, u16, u16); SPRITE_CACHE_MAX], buffer: & mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16) {
         // Draw, according to texture
         
         let p1 = vertices[0];
@@ -1078,42 +1063,30 @@ impl<'a> Quad<'a> {
 }
 
 impl<'a> Sprite for Quad<'a> {
-    fn gen_vertices(&self, cache: &mut [(isize, isize, usize, usize); SPRITE_CACHE_MAX], setup_matrix: &Matrix) {
+    fn gen_vertices(&self, cache: &mut [(i16, i16, u16, u16); SPRITE_CACHE_MAX], setup_matrix: &Matrix) {
         let m = Matrix::mult_matrices(&setup_matrix, &self.matrix); 
         
-        let (x_t, y_t, _) = m.apply_to_vertex(self.p1.x, self.p1.y, 0.0);
-        // Mapped to [-1, 1], so return to ([0, 360], [0, 240])
-        let x: isize = ((x_t + 1.0) * 0.5 * 320.0) as isize; 
-        let y: isize = ((1.0 - y_t) * 0.5 * 240.0) as isize; // Grows downwards
-        let mut p1 = (x, y, 0 as usize, 0 as usize);
+        let (x, y) = m.apply_to_vertex_2d(self.p1.x, self.p1.y);
+        let mut p1 = (x, y, 0 as u16, 0 as u16);
         
-        let (x_t, y_t, _) = m.apply_to_vertex(self.p2.x, self.p2.y, 0.0);
-        // Mapped to [-1, 1], so return to ([0, 360], [0, 240])
-        let x: isize = ((x_t + 1.0) * 0.5 * 320.0) as isize; 
-        let y: isize = ((1.0 - y_t) * 0.5 * 240.0) as isize; // Grows downwards
-        let mut p2 = (x, y, 0 as usize, 0 as usize);
+        let (x, y) = m.apply_to_vertex_2d(self.p2.x, self.p2.y);
+        let mut p2 = (x, y, 0 as u16, 0 as u16);
 
-        let (x_t, y_t, _) = m.apply_to_vertex(self.p3.x, self.p3.y, 0.0);
-        // Mapped to [-1, 1], so return to ([0, 360], [0, 240])
-        let x: isize = ((x_t + 1.0) * 0.5 * 320.0) as isize; 
-        let y: isize = ((1.0 - y_t) * 0.5 * 240.0) as isize; // Grows downwards
-        let mut p3 = (x, y, 0 as usize, 0 as usize);
+        let (x, y) = m.apply_to_vertex_2d(self.p3.x, self.p3.y);
+        let mut p3 = (x, y, 0 as u16, 0 as u16);
         
-        let (x_t, y_t, _) = m.apply_to_vertex(self.p4.x, self.p4.y, 0.0);
-        // Mapped to [-1, 1], so return to ([0, 360], [0, 240])
-        let x: isize = ((x_t + 1.0) * 0.5 * 320.0) as isize; 
-        let y: isize = ((1.0 - y_t) * 0.5 * 240.0) as isize; // Grows downwards
-        let mut p4 = (x, y, 0 as usize, 0 as usize);
+        let (x, y) = m.apply_to_vertex_2d(self.p4.x, self.p4.y);
+        let mut p4 = (x, y, 0 as u16, 0 as u16);
 
         if let Some(Texture::Image(image)) = &self.texture {
-            p1.2 = (self.p1.u * image.width as f32) as usize;
-            p1.3 = (self.p1.v * image.height as f32) as usize;
-            p2.2 = (self.p2.u * image.width as f32) as usize;
-            p2.3 = (self.p2.v * image.height as f32) as usize;
-            p3.2 = (self.p3.u * image.width as f32) as usize;
-            p3.3 = (self.p3.v * image.height as f32) as usize;
-            p4.2 = (self.p4.u * image.width as f32) as usize;
-            p4.3 = (self.p4.v * image.height as f32) as usize;
+            p1.2 = (self.p1.u * image.width as f32)  as u16;
+            p1.3 = (self.p1.v * image.height as f32) as u16;
+            p2.2 = (self.p2.u * image.width as f32)  as u16;
+            p2.3 = (self.p2.v * image.height as f32) as u16;
+            p3.2 = (self.p3.u * image.width as f32)  as u16;
+            p3.3 = (self.p3.v * image.height as f32) as u16;
+            p4.2 = (self.p4.u * image.width as f32)  as u16;
+            p4.3 = (self.p4.v * image.height as f32) as u16;
         }
         
         cache[0] = p1;
@@ -1122,7 +1095,7 @@ impl<'a> Sprite for Quad<'a> {
         cache[3] = p4;
     }
 
-    fn draw(&self, vertices: &[(isize, isize, usize, usize); SPRITE_CACHE_MAX], buffer: &mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16) {
+    fn draw(&self, vertices: &[(i16, i16, u16, u16); SPRITE_CACHE_MAX], buffer: &mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16) {
         
         let p1 = vertices[0];
         let p2 = vertices[1];
@@ -1163,7 +1136,7 @@ pub struct Font<'a> {
     fontsheet: Image<'a>,
     glyph_width: u16,
     glyph_height: u16,
-    characters: [(usize, usize); 95],
+    characters: [(u16, u16); 95],
 }
 
 impl<'a> Font<'a> {
@@ -1203,12 +1176,12 @@ impl<'a> Font<'a> {
         let fontsheet = Image::new(&fontsheet[18..]);
         
         // Construct UV values for each font
-        let mut characters = [(0 as usize, 0 as usize); 95];
+        let mut characters = [(0 as u16, 0 as u16); 95];
         let mut i = 0;
         for x in 0..glyphs_per_col {
             for y in 0..glyphs_per_row {
-               let u: usize = (x * width).into(); 
-               let v: usize = (y * height).into(); 
+               let u: u16 = (x * width).into(); 
+               let v: u16 = (y * height).into(); 
                characters[i] = (u, v);
                i += 1;
             
@@ -1235,7 +1208,7 @@ impl<'a> Font<'a> {
         &self.fontsheet
     }
 
-    pub fn get_character(&self, c: u8) -> Option<(usize, usize)> {
+    pub fn get_character(&self, c: u8) -> Option<(u16, u16)> {
         if c > 95 {
             return None;
         }
@@ -1247,7 +1220,7 @@ impl<'a> Font<'a> {
 
 
 pub struct Text<'a> {
-    pub raw: String<64>,
+    pub raw: String<16>,
 
     font: &'a Font<'a>,
     size: f32,
@@ -1259,7 +1232,7 @@ pub struct Text<'a> {
 }
 
 impl<'a> Text<'a> {
-    fn new(font: &'a Font<'a>, position: Coord2D) -> Self {
+    pub fn new(font: &'a Font<'a>, position: Coord2D) -> Self {
         let matrix = Matrix::identity();
 
         Self {
@@ -1275,7 +1248,7 @@ impl<'a> Text<'a> {
     }
     
     // Updates matrix with stored information from scratch, prevents floating point math error 
-    fn update_matrix(&mut self) {
+    pub fn update_matrix(&mut self) {
         let mut m = Matrix::identity();
         
         // Perform Translate Rotate Scale update
@@ -1285,7 +1258,7 @@ impl<'a> Text<'a> {
         self.matrix = m;
     }
 
-    fn with_size(self, size: f32) -> Self {
+    pub fn with_size(self, size: f32) -> Self {
         let mut new = Self {
             size,
             ..self
@@ -1296,17 +1269,17 @@ impl<'a> Text<'a> {
         new
     }
     
-    fn set_size(&mut self, size: f32) {
+    pub fn set_size(&mut self, size: f32) {
         self.size = size;
         self.update_matrix();
     }
 
-    fn set_str(&mut self, string: &str) {
+    pub fn set_str(&mut self, string: &str) {
         self.raw.clear();
         let _ = self.raw.push_str(string);
     }
     
-    fn set_fmt(&mut self, args: Arguments<'a>) {
+    pub fn set_fmt(&mut self, args: Arguments<'a>) {
         self.raw.clear();
         let _ = self.raw.write_fmt(args);
     }
@@ -1320,7 +1293,7 @@ macro_rules! text_set {
 }
 
 impl<'a> Sprite for Text<'a> {
-    fn gen_vertices(&self, cache: &mut [(isize, isize, usize, usize); SPRITE_CACHE_MAX as usize], setup_matrix: &Matrix) {
+    fn gen_vertices(&self, cache: &mut [(i16, i16, u16, u16); SPRITE_CACHE_MAX as usize], setup_matrix: &Matrix) {
         let m = Matrix::mult_matrices(&setup_matrix, &self.matrix); 
         
         // We fill our cache with (x,y,u,v) for each character, based on its position and font
@@ -1329,34 +1302,25 @@ impl<'a> Sprite for Text<'a> {
         let mut i: usize = 0;
         let mut cur_coord = self.position;
         let (glyph_width, glyph_height) = self.font.get_glyph_dimensions();
-        let (glyph_width, glyph_height) = (glyph_width as usize, glyph_height as usize);
         for c in self.raw.chars() {
             // Pass c to font to get UV values
             let uv = self.font.get_character(c as u8);
             
             if let Some((u, v)) = uv {
                 // Transform XY, and store to cache
-                let (x_t, y_t, _) = m.apply_to_vertex(cur_coord.x as f32, cur_coord.y as f32, 0.0);
-                let x: isize = ((x_t + 1.0) * 0.5 * 320.0) as isize; 
-                let y: isize = ((1.0 - y_t) * 0.5 * 240.0) as isize; // Grows downwards
+                let (x, y) = m.apply_to_vertex_2d(cur_coord.x as f32, cur_coord.y as f32);
                 cache[i] = (x, y, u, v);
                 i += 1;
                 
-                let (x_t, y_t, _) = m.apply_to_vertex((cur_coord.x + glyph_width as isize) as f32, cur_coord.y as f32, 0.0);
-                let x: isize = ((x_t + 1.0) * 0.5 * 320.0) as isize; 
-                let y: isize = ((1.0 - y_t) * 0.5 * 240.0) as isize; // Grows downwards
+                let (x, y) = m.apply_to_vertex_2d((cur_coord.x + glyph_width as i16) as f32, cur_coord.y as f32);
                 cache[i] = (x, y, u + glyph_width, v);
                 i += 1;
                 
-                let (x_t, y_t, _) = m.apply_to_vertex(cur_coord.x as f32, (cur_coord.y + glyph_height as isize) as f32, 0.0);
-                let x: isize = ((x_t + 1.0) * 0.5 * 320.0) as isize; 
-                let y: isize = ((1.0 - y_t) * 0.5 * 240.0) as isize; // Grows downwards
+                let (x, y) = m.apply_to_vertex_2d(cur_coord.x as f32, (cur_coord.y + glyph_height as i16) as f32);
                 cache[i] = (x, y, u, v + glyph_height);
                 i += 1;
 
-                let (x_t, y_t, _) = m.apply_to_vertex((cur_coord.x + glyph_width as isize) as f32, (cur_coord.y + glyph_height as isize) as f32, 0.0);
-                let x: isize = ((x_t + 1.0) * 0.5 * 320.0) as isize; 
-                let y: isize = ((1.0 - y_t) * 0.5 * 240.0) as isize; // Grows downwards
+                let (x, y) = m.apply_to_vertex_2d((cur_coord.x + glyph_width as i16) as f32, (cur_coord.y + glyph_height as i16) as f32);
                 cache[i] = (x, y, u + glyph_width, v + glyph_height);
                 i += 1;
             }
@@ -1365,22 +1329,22 @@ impl<'a> Sprite for Text<'a> {
             match c {
                 '\n' => {
                     cur_coord.x = self.position.x;
-                    cur_coord.y += (glyph_height + self.y_spacing as usize) as isize;
+                    cur_coord.y += (glyph_height + self.y_spacing as u16) as i16;
                 },
                 _ => {
-                    cur_coord.x += (glyph_width + self.x_spacing as usize) as isize;
+                    cur_coord.x += (glyph_width + self.x_spacing as u16) as i16;
                 },
             }
         }
 
     }
 
-    fn draw(&self, vertices: &[(isize, isize, usize, usize); SPRITE_CACHE_MAX], buffer: & mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16) {
+    fn draw(&self, vertices: &[(i16, i16, u16, u16); SPRITE_CACHE_MAX], buffer: & mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16) {
         // Loop per character in the string
         // Should use enumerate to get character and index to check if newline
         let mut index: usize = 0;
         for (i, c) in self.raw.chars().enumerate() {
-            if c == '\n' { continue; }
+            if c == '\n' || c == ' ' { continue; }
 
             let p1 = vertices[(index * 4) + 0];
             let p2 = vertices[(index * 4) + 1];

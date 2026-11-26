@@ -14,7 +14,7 @@ esp-hal = { version = "~1.2.2", features = ["esp32", "log-04", "unstable"] }
 esp-rtos = { version = "0.4.0", features = [
   "embassy",
   "esp-alloc",
-  "esp-radio",
+ "esp-radio",
   "esp32",
   "log-04",
 ] }
@@ -41,6 +41,7 @@ esp-println = { version = "0.18.0", features = ["esp32", "log-04"] }
 # for more networking protocol support see https://crates.io/crates/edge-net
 embassy-executor = { version = "0.10.0", features = ["log"] }
 embassy-time = { version = "0.5.0", features = ["log"] }
+
 esp-radio = { version = "1.0.0-beta.1", features = [
   "esp-alloc",
   "esp32",
@@ -48,6 +49,7 @@ esp-radio = { version = "1.0.0-beta.1", features = [
   "unstable",
   "wifi",
 ] }
+
 smoltcp = { version = "0.14.0", default-features = false, features = [
   "log",
   "medium-ethernet",

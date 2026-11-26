@@ -149,9 +149,13 @@ impl<'a> HomePusher<'a> {
 // Static display buffer for command.
 display_cmd_buffer_new!(DISPLAY_CMD_BUFFER);
 
+// Images
 const APPLE_VIMG: &[u8] = include_bytes!("../files/images/appl.vimg");
 const CSM_VIMG  : &[u8] = include_bytes!("../files/images/csm_movie.vimg");
-const VFONT     : &[u8] = include_bytes!("../files/fonts/v-font-small.vfont");
+const VFONT_VIMG     : &[u8] = include_bytes!("../files/fonts/v-font-small.vfont");
+
+// Fonts
+static FONT: StaticCell<Font<'static>> = StaticCell::new();
 
 #[allow(
     clippy::large_stack_frames,
@@ -219,12 +223,6 @@ async fn main(spawner: Spawner) {
     
     let mut renderer = Renderer::new(pusher);
     
-    // Construct our projection and camera
-    let projection = Projection::new_2D(1.0);
-    let camera     = Camera::new(0, 0, -50);
-    
-    // Setup a scene
-    let mut home_scene = Scene::new(Display::rgb(0, 0, 0), projection);
     
     // Setup some shapes
     let mut ngon = Ngon::new(32, Coord2D::new(160, 60), 45)
@@ -266,14 +264,26 @@ async fn main(spawner: Spawner) {
     let mut circle_image = Ngon::new(16, Coord2D::new(100, 100), 50)
         //.with_texture(GOLDSHIP_VIMG);
         .with_texture(CSM_VIMG);
+    
+    // Font and text displayed
+    let font: &'static Font<'static> = FONT.init(Font::new(VFONT_VIMG));
+    let mut text = Text::new(&font, Coord2D::new(50, 50)).with_size(2.0);
+    text.set_str("Hello, World!");
 
-    // Add shapes to scene
-    home_scene.add(&mut ngon);
-    home_scene.add(&mut triangle);
-    home_scene.add(&mut long_triangle);
-    home_scene.add(&mut quad);
-    home_scene.add(&mut image);
-    home_scene.add(&mut circle_image);
+    
+    // Construct our projection and camera
+    let projection = Projection::new_2D(1.0);
+    let camera     = Camera::new(0, 0, -50);
+    
+    // Setup a scene and add shapes
+    let mut home_scene = Scene::new(Display::rgb(255, 255, 255), projection);
+    // home_scene.add(&mut ngon);
+    // home_scene.add(&mut triangle);
+    // home_scene.add(&mut long_triangle);
+    // home_scene.add(&mut quad);
+    // home_scene.add(&mut image);
+    // home_scene.add(&mut circle_image);
+    home_scene.add(&mut text);
 
     info!("{:#?}", ngon);
     
@@ -304,7 +314,7 @@ async fn main(spawner: Spawner) {
             let fps = 1e6 as f32 / timer.elapsed().as_micros() as f32;
             timer = Instant::now();
             info!("FPS: {fps}");
-            ticks.next().await;
+            // ticks.next().await;
         }
         
 //        loop { // Background BIOS

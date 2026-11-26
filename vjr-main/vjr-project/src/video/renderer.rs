@@ -76,7 +76,7 @@ impl<P: Pusher> Renderer<P> {
 
         // For each sprite in the scene, cache the vertex transformations.
         // Since they are unchanged between chunk writes
-        let mut cache = [[(0 as isize, 0 as isize, 0 as usize, 0 as usize); sprite::SPRITE_CACHE_MAX]; SCENE_SPRITE_MAX as usize];
+        let mut cache = [[(0 as i16, 0 as i16, 0 as u16, 0 as u16); sprite::SPRITE_CACHE_MAX]; SCENE_SPRITE_MAX as usize];
         unsafe {
             for (index, &sprite) in scene.sprites.iter().enumerate() {
                 (*sprite).gen_vertices(&mut cache[index], &m);
