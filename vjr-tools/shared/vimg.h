@@ -12,10 +12,6 @@
 
 #include "datavector.h"
 
-
-
-
-
 typedef struct Vimg {
     char* name;
     char* data;
@@ -144,7 +140,7 @@ Vimg make_vimg(char* fileName) {
     }
 
     //finished
-    printf("Generated image %s. Thank you, and goodbye.\n", outputName);
+    printf("Generated image. Thank you, and goodbye.\n", outputName);
     stbi_image_free(imgStream);
     
     // Wrap it in a Vimg container and return it

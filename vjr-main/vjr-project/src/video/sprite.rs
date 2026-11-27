@@ -15,7 +15,7 @@ use core::fmt::{
 
 use embedded_graphics_core::{
     pixelcolor::{
-//        RgbColor, // Trait
+        RgbColor, // Trait
         Rgb565 as RGB, // We are only really dealing with rgb565
         raw::RawU16,
     },
@@ -1224,6 +1224,7 @@ pub struct Text<'a> {
 
     font: &'a Font<'a>,
     size: f32,
+    colour: RGB,
     position: Coord2D,
     rotation: usize,
     x_spacing: u8,
@@ -1239,6 +1240,7 @@ impl<'a> Text<'a> {
             raw: String::new(),
             font,
             size: 1.0,
+            colour: RGB::BLACK,
             position,
             rotation: 0,
             x_spacing: 0,
@@ -1272,6 +1274,19 @@ impl<'a> Text<'a> {
     pub fn set_size(&mut self, size: f32) {
         self.size = size;
         self.update_matrix();
+    }
+    
+    pub fn with_colour(self, colour: RGB) -> Self {
+        let mut new = Self {
+            colour,
+            ..self
+        };
+
+        new
+    }
+    
+    pub fn set_colour(&mut self, colour: RGB) {
+        self.colour = colour;
     }
 
     pub fn set_str(&mut self, string: &str) {
@@ -1357,5 +1372,4 @@ impl<'a> Sprite for Text<'a> {
             index += 1;
         }
     }
-
 }

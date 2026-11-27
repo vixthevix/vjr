@@ -3,7 +3,7 @@ This program will be used to convert any image into a custom format for the vjr.
 It uses the stb_image.h library to convert an image into a raw RGB stream.
 This stream is then converted into RGB565, and then placed intoa  file with a custom header file.
 
-This filetype will be called... a V Image, shortened to .vimg, because im very creative, and obviously this is subject to change.
+This filetype will be called... a V Image, shortened to .vfont, because im very creative, and obviously this is subject to change.
 
 The header looks like so (in uint8_ts):
     
@@ -42,6 +42,117 @@ uint16_t read_number(void)
   return value_input;
 }
 
+typedef struct Vfont {
+    char* data;
+    uint32_t data_size;
+    bool valid;
+} Vfont;
+
+// uint16_t height = 0, width = 0, glyphs_per_col = 0, glyphs_per_row = 0;
+
+Vfont make_vfont(char* fileName, uint16_t glyph_height, uint16_t glyph_width, uint16_t glyphs_per_col, uint16_t glyphs_per_row) {
+    Vfont vfont = { 0 };
+    
+    if (!fileName) {
+        printf("File name is NULL\n");
+        return vfont;
+    }
+
+    //convert image into stream
+    int width, height, channels;
+    uint8_t* imgStream = stbi_load(fileName, &width, &height, &channels, 4); // Force into RGBA mode
+    if (!imgStream) {
+        printf("Unable to load file %s, sorry :(\n", fileName);
+        return vfont;
+    }
+
+    printf("Image %s loaded, with dimensions %ix%i\n", fileName, width, height);
+    //check if the image is too big, remember that we must fit height and width into 2 uint8_ts each.
+
+    // if (width > ((1 << 16) - 1) || height > ((1 << 16) - 1)) {
+    //     printf("Sorry, this image is too big, it must fit under or equal to %ux%u pixels", (1 << 16) - 1, (1 << 16) - 1);
+    //     stbi_image_free(imgStream);
+    //     return vfont;
+    // }
+    
+    /*
+    VFONT STRUCTURE
+        "VFONT" guard
+        Image width     (2 bytes)
+        Image height    (2 bytes)
+        Glyph width     (2 bytes)
+        Glyph height    (2 bytes)
+        Glyphs per cols (2 bytes)
+        Glyphs per rows (2 bytes)
+        "VFONT" guard
+    */
+
+    dataVector v = dataVectorInit(1024);    
+    dataVectorPushString(&v, "VFONT");
+
+    dataVectorPush(&v, (uint8_t)(width >> 8));
+    dataVectorPush(&v, (uint8_t)(width & 0x00ff));
+
+    dataVectorPush(&v, (uint8_t)(height >> 8));
+    dataVectorPush(&v, (uint8_t)(height & 0x00ff));
+
+    dataVectorPush(&v, (uint8_t)(glyph_width >> 8));
+    dataVectorPush(&v, (uint8_t)(glyph_width & 0x00ff));
+
+    dataVectorPush(&v, (uint8_t)(glyph_height >> 8));
+    dataVectorPush(&v, (uint8_t)(glyph_height & 0x00ff));
+
+    dataVectorPush(&v, (uint8_t)(glyphs_per_col >> 8));
+    dataVectorPush(&v, (uint8_t)(glyphs_per_col & 0x00ff));
+
+    dataVectorPush(&v, (uint8_t)(glyphs_per_row >> 8));
+    dataVectorPush(&v, (uint8_t)(glyphs_per_row & 0x00ff));
+
+    dataVectorPushString(&v, "VFONT");
+   
+
+    // For fonts, we will use a monochrome font
+    // 1 bit = 1 pixel, so 1 byte = 8 pixels
+
+    unsigned long imgSize = width * height * 4;
+    uint8_t cur_byte = 0, write_byte = 0;
+    for (unsigned long i = 0; i < imgSize;) {
+        uint8_t
+        R = imgStream[i++],
+        G = imgStream[i++],
+        B = imgStream[i++],
+        A = imgStream[i++];
+        
+        write_byte <<= 1;
+        if ((R == 0 && G == 0 && B == 0) || A == 0xff) {
+            write_byte |= 1;
+        }
+        
+        cur_byte = (cur_byte + 1) % 8;
+        if (cur_byte == 0) {
+            // Reached 8 bits read, so write
+            dataVectorPush(&v, write_byte);
+            write_byte = 0;
+        }
+        
+    }
+    // Write remaining bits
+    if (cur_byte != 0) {
+        // Shift write byte up to make most significant
+        write_byte <<= (8 - cur_byte);
+        dataVectorPush(&v, write_byte);
+
+    }
+    
+    // Wrap in Vfont container and return
+    vfont.data = v.data;
+    vfont.data_size = v.index;
+    vfont.valid = true;
+    stbi_image_free(imgStream);
+    
+    return vfont;
+}
+
 int main(int argc, char** argv) {
     if (argc <= 1) {
         printf("Please attach the name of the file you wish to convert. Thank you.\n");
@@ -75,36 +186,17 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    Vimg vimg = make_vimg(args.input_file);
+    Vfont vfont = make_vfont(args.input_file, width, height, glyphs_per_col, glyphs_per_row);
     
-    if (vimg.valid && vimg.name && vimg.data) {
+    if (vfont.valid && vfont.data) {
         // Write to file
         FILE* outputFile = fopen(args.output_file, "wb");
-        
-        // Font specific data
-        fprintf(outputFile, "VFONT");
-
-        fputc((uint8_t)(width >> 8),     outputFile);
-        fputc((uint8_t)(width & 0x00ff), outputFile);
-
-        fputc((uint8_t)(height >> 8),     outputFile);
-        fputc((uint8_t)(height & 0x00ff), outputFile);
-        
-        fputc((uint8_t)(glyphs_per_col >> 8),     outputFile);
-        fputc((uint8_t)(glyphs_per_col & 0x00ff), outputFile);
-        
-        fputc((uint8_t)(glyphs_per_row >> 8),     outputFile);
-        fputc((uint8_t)(glyphs_per_row & 0x00ff), outputFile);
-
-        fprintf(outputFile, "VFONT");
-        
-        // Image specific data
-        fwrite(vimg.data, sizeof(uint8_t), vimg.data_size, outputFile);
-
+        fwrite(vfont.data, sizeof(uint8_t), vfont.data_size, outputFile);
         fclose(outputFile);
+        printf("Generated image %s. Thank you, and goodbye.\n", args.output_file);
     }
     else {
-        printf("Could not make VIMG\n");
+        printf("Could not make VFONT\n");
         return 1;
     }
 
