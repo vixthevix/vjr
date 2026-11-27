@@ -411,6 +411,211 @@ fn triangle_texture(p1: (i16, i16, u16, u16), p2: (i16, i16, u16, u16), p3: (i16
 }
 
 /*
+Default function for filling in a triangle with a font texture
+*/
+fn triangle_font(p1: (i16, i16, u16, u16), p2: (i16, i16, u16, u16), p3: (i16, i16, u16, u16), font: &Font, colour: &[u8; 2], buffer: &mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16) {
+    // Check bounds
+    let x1: i16 = 0;
+    let y1: i16 = y_offset as i16;
+    let x2: i16 = DISPLAY_BUFFER_WIDTH as i16;
+    let y2: i16 = y_offset as i16 + DISPLAY_BUFFER_HEIGHT as i16;
+    
+    // Cast texture coords to isize
+    let t1 = (p1.2 as i16, p1.3 as i16);
+    let t2 = (p2.2 as i16, p2.3 as i16);
+    let t3 = (p3.2 as i16, p3.3 as i16);
+
+    let mut a = (Coord2D::new(p1.0, p1.1), t1);
+    let mut b = (Coord2D::new(p2.0, p2.1), t2);
+    let mut c = (Coord2D::new(p3.0, p3.1), t3);
+
+    // If all points are out of range, we do not fill.
+    if a.0.y < y1 && b.0.y < y1 && c.0.y < y1 || a.0.y >= y2 && b.0.y >= y2 && c.0.y >= y2 { return; }
+    
+    // Sort vertices from highest to lowest based on y values.
+    if a.0.y > b.0.y { core::mem::swap(&mut a, &mut b); }
+    if a.0.y > c.0.y { core::mem::swap(&mut a, &mut c); }
+    if b.0.y > c.0.y { core::mem::swap(&mut b, &mut c); }
+
+    let total_height = c.0.y - a.0.y;
+    
+    // Get access to the fontsheet and image dimensions
+    let texture = font.get_fontsheet();
+    let (image_width, image_height) = font.get_image_dimensions();
+
+    // Focus on filling top and bottom segments (split by b)
+    
+    if a.0.y != b.0.y { // Bottom half is not horizontally flat
+        let segment_height = b.0.y - a.0.y; // From center line to bottom
+        
+        // Clamp y to row buffer border
+        let y_start = a.0.y.max(y1) as i16;
+        let y_end   = b.0.y.min(y2) as i16;
+
+        // Draw horizontal lines with each y
+        for y in y_start..y_end {
+            // Get coordinate and texture lines for each edge
+            let y_diff: i16 = (y - a.0.y) as i16;
+
+            // a -> c line
+            let x_ac = a.0.x + ((c.0.x - a.0.x) * y_diff) / total_height;  
+            let u_ac = a.1.0 + ((c.1.0 - a.1.0) * y_diff) / total_height;
+            let v_ac = a.1.1 + ((c.1.1 - a.1.1) * y_diff) / total_height;
+            
+            // a -> b line
+            let x_ab = a.0.x + ((b.0.x - a.0.x) * y_diff) / segment_height;  
+            let u_ab = a.1.0 + ((b.1.0 - a.1.0) * y_diff) / segment_height;
+            let v_ab = a.1.1 + ((b.1.1 - a.1.1) * y_diff) / segment_height;
+        
+            
+            // Determine min and max
+            let (x_min, x_max, u_min, u_max, v_min, v_max) = if x_ac < x_ab {
+                (x_ac, x_ab, u_ac as u32, u_ab as u32, v_ac as u32, v_ab as u32)
+            }
+            else {
+                (x_ab, x_ac, u_ab as u32, u_ac as u32, v_ab as u32, v_ac as u32)
+            };
+            
+            // To navigate texture, calculate gradient of U and V lines with respect to x
+            // Since integer division, use bit shifting to account for errors
+            
+            let dx = (x_max - x_min) as i32;
+
+            let du_dx = if dx > 0 { ((u_max - u_min) << 16) as i32 / dx } else { 0 };
+            let dv_dx = if dx > 0 { ((v_max - v_min) << 16) as i32 / dx } else { 0 };
+            
+            // UV trackers, incremented by d/dx, with shifting taken into account for correction
+            let mut u_cur = u_min << 16;
+            let mut v_cur = v_min << 16;
+            
+            // Clamp x to row buffer border
+            let x_start = x_min.max(x1);
+            let x_end   = x_max.min(x2);
+
+            let px_y = y - y_offset as i16;
+            let px_offset = DISPLAY_BUFFER_WIDTH as i16 * px_y;
+
+            // Perform draw
+            for x in x_start..x_end {
+                // Shift UV back to get actual coordinates
+                let tex_x = (u_cur >> 16) as usize;
+                let tex_y = (v_cur >> 16) as usize;
+                
+                // Clamp UV to image size
+                let tex_x = tex_x.min(image_width  as usize - 1);
+                let tex_y = tex_y.min(image_height as usize - 1);
+                let tex_index =  tex_x + (image_width as usize * tex_y);
+                
+                // VFONT packs 8 pixels into 1 byte
+                let byte_index = tex_index >> 3; // divide by 8
+                let bit_offset = tex_index %  8; // pixel offset in byte
+                // Shift to put current pixel in 1's place, mask with 1 to see if solid
+                let cur_pixel  = (texture[byte_index] >> (7 - bit_offset)) & 1;
+
+                // x does not change, but y is offsetted back.
+                let px_x = x;
+
+                // Buffer is 1D, and each px is two bytes.
+                let index: usize = ((px_x + px_offset) * 2) as usize;
+                
+                if cur_pixel != 0 {
+                    buffer[index]     = colour[0];
+                    buffer[index + 1] = colour[1];
+                }
+
+                // Increment current UV
+                u_cur += du_dx as u32;
+                v_cur += dv_dx as u32;
+            }
+        }
+    }
+    
+    if b.0.y != c.0.y { // Top half is not horizontally flat
+        let segment_height = c.0.y - b.0.y; // From center line to bottom
+        
+        // Clamp y to row buffer border
+        let y_start = b.0.y.max(y1);
+        let y_end   = c.0.y.min(y2);
+        
+        // Draw horizontal lines with each y
+        for y in y_start..y_end {
+            // Get coordinate and texture lines for each edge
+
+            // a -> c line
+            let x_ac = a.0.x + ((c.0.x - a.0.x) * (y - a.0.y)) / total_height;  
+            let u_ac = a.1.0 + ((c.1.0 - a.1.0) * (y - a.0.y)) / total_height;
+            let v_ac = a.1.1 + ((c.1.1 - a.1.1) * (y - a.0.y)) / total_height;
+            
+            // b -> c line
+            let x_bc = b.0.x + ((c.0.x - b.0.x) * (y - b.0.y)) / segment_height;  
+            let u_bc = b.1.0 + ((c.1.0 - b.1.0) * (y - b.0.y)) / segment_height;
+            let v_bc = b.1.1 + ((c.1.1 - b.1.1) * (y - b.0.y)) / segment_height;
+        
+            
+            // Determine min and max
+            let (x_min, x_max, u_min, u_max, v_min, v_max) = if x_ac < x_bc {
+                (x_ac, x_bc, u_ac as u32, u_bc as u32, v_ac as u32, v_bc as u32)
+            }
+            else {
+                (x_bc, x_ac, u_bc as u32, u_ac as u32, v_bc as u32, v_ac as u32)
+            };
+            
+            // To navigate texture, calculate gradient of U and V lines with respect to x
+            // Since integer division, use bit shifting to account for errors
+            
+            let dx = (x_max - x_min) as i32;
+
+            let du_dx = if dx > 0 { ((u_max - u_min) << 16) as i32 / dx } else { 0 };
+            let dv_dx = if dx > 0 { ((v_max - v_min) << 16) as i32 / dx } else { 0 };
+            
+            // UV trackers, incremented by d/dx, with shifting taken into account for correction
+            let mut u_cur = u_min << 16;
+            let mut v_cur = v_min << 16;
+
+            // Clamp x to row buffer border
+            let x_start = x_min.max(x1);
+            let x_end   = x_max.min(x2);
+
+            let px_y = y - y_offset as i16;
+            let px_offset = DISPLAY_BUFFER_WIDTH as i16 * px_y;
+
+            // Perform draw
+            for x in x_start..x_end {
+                // Shift UV back to get actual coordinates
+                let tex_x = (u_cur >> 16) as usize;
+                let tex_y = (v_cur >> 16) as usize;
+                
+                // Clamp UV to image size
+                let tex_x = tex_x.min(image_width  as usize - 1);
+                let tex_y = tex_y.min(image_height as usize - 1);
+                let tex_index =  tex_x + (image_width as usize * tex_y);
+                
+                // VFONT packs 8 pixels into 1 byte
+                let byte_index = tex_index >> 3; // divide by 8
+                let bit_offset = tex_index %  8; // pixel offset in byte
+                // Shift to put current pixel in 1's place, mask with 1 to see if solid
+                let cur_pixel = (texture[byte_index] >> (7 - bit_offset)) & 1;
+
+                // x does not change, but y is offsetted back.
+                let px_x = x;
+
+                // Buffer is 1D, and each px is two bytes.
+                let index: usize = ((px_x + px_offset) * 2) as usize;
+                
+                if cur_pixel != 0 {
+                    buffer[index]     = colour[0];
+                    buffer[index + 1] = colour[1];
+                }
+
+                // Increment current UV
+                u_cur += du_dx as u32;
+                v_cur += dv_dx as u32;
+            }
+        }
+    }
+}
+
+/*
 2D Coordinate struct
 */
 #[derive(Copy, Clone, Debug)]
@@ -1133,22 +1338,27 @@ impl<'a> Sprite for Quad<'a> {
 }
 
 pub struct Font<'a> {
-    fontsheet: Image<'a>,
+    fontsheet: &'a [u8],
+    image_width: u16,
+    image_height: u16,
     glyph_width: u16,
     glyph_height: u16,
-    characters: [(u16, u16); 95],
+    characters: [(u16, u16); 94],
 }
 
 impl<'a> Font<'a> {
     pub fn new(fontsheet: &'a [u8]) -> Self {
-        // VFONT adds a header to a VIMG
-        // Structure:
-        // VFONT (5 bytes, guard)
-        // glyph width  (2 bytes)
-        // glyph height (2 bytes)
-        // glyphs per column (2 bytes)
-        // glyphs per row    (2 bytes)
-        // VFONT (5 bytes, guard)
+        /*
+        VFONT STRUCTURE
+            "VFONT" guard
+            Image width     (2 bytes)
+            Image height    (2 bytes)
+            Glyph width     (2 bytes)
+            Glyph height    (2 bytes)
+            Glyphs per cols (2 bytes)
+            Glyphs per rows (2 bytes)
+            "VFONT" guard
+        */
         
         // Read the data for the header and extract information from it.
         
@@ -1158,44 +1368,49 @@ impl<'a> Font<'a> {
             panic!("Invalid VFONT, starting guard not present");
         }
 
-        // Width and height store in 2 bytes each.
-        let width  = u16::from_be_bytes([fontsheet[5], fontsheet[6]]);
-        let height = u16::from_be_bytes([fontsheet[7], fontsheet[8]]);
+        // Width and height of image
+        let image_width  = u16::from_be_bytes([fontsheet[5], fontsheet[6]]);
+        let image_height = u16::from_be_bytes([fontsheet[7], fontsheet[8]]);
+        
+        // Width and height of glyph
+        let glyph_width  = u16::from_be_bytes([fontsheet[9], fontsheet[10]]);
+        let glyph_height = u16::from_be_bytes([fontsheet[11], fontsheet[12]]);
         
         // Glyphs per row/column
-        let glyphs_per_col = u16::from_be_bytes([fontsheet[9], fontsheet[10]]);
-        let glyphs_per_row = u16::from_be_bytes([fontsheet[11], fontsheet[12]]);
+        let glyphs_per_col = u16::from_be_bytes([fontsheet[13], fontsheet[14]]);
+        let glyphs_per_row = u16::from_be_bytes([fontsheet[15], fontsheet[16]]);
         
         // Ensure final guard present
-        let guard = &fontsheet[13..=17];
+        let guard = &fontsheet[17..=21];
         if !(guard == b"VFONT") {
             panic!("Invalid VFONT, ending guard not present");
         }
         
         // We can wrap the rest of the VFONT in an Image, since it is just a VIMG
-        let fontsheet = Image::new(&fontsheet[18..]);
+        let fontsheet = &fontsheet[22..];
         
         // Construct UV values for each font
-        let mut characters = [(0 as u16, 0 as u16); 95];
+        let mut characters = [(0 as u16, 0 as u16); 94];
         let mut i = 0;
-        for x in 0..glyphs_per_col {
-            for y in 0..glyphs_per_row {
-               let u: u16 = (x * width).into(); 
-               let v: u16 = (y * height).into(); 
+        for y in 0..glyphs_per_row {
+            for x in 0..glyphs_per_col {
+               let u: u16 = (x * glyph_width).into(); 
+               let v: u16 = (y * glyph_height).into(); 
                characters[i] = (u, v);
                i += 1;
-            
-                if i >= 95 { break; }
+               if i >= 94 { break; }
             }
 
-            if i >= 95 { break; }
+            if i >= 94 { break; }
         }
 
 
         Self {
             fontsheet,
-            glyph_width: width,
-            glyph_height: height,
+            image_width,
+            image_height,
+            glyph_width,
+            glyph_height,
             characters,
         }
     }
@@ -1204,16 +1419,20 @@ impl<'a> Font<'a> {
         (self.glyph_width, self.glyph_height)
     }
     
-    pub fn get_fontsheet(&self) ->  &Image<'a> {
+    pub fn get_image_dimensions(&self) -> (u16, u16) {
+        (self.image_width, self.image_height)
+    }
+    
+    pub fn get_fontsheet(&self) ->  &'a [u8] {
         &self.fontsheet
     }
 
     pub fn get_character(&self, c: u8) -> Option<(u16, u16)> {
-        if c > 95 {
+        if !(33..=126).contains(&c) {
             return None;
         }
 
-        Some(self.characters[c as usize])
+        Some(self.characters[(c - 33) as usize])
     }
 }
 
@@ -1317,6 +1536,7 @@ impl<'a> Sprite for Text<'a> {
         let mut i: usize = 0;
         let mut cur_coord = self.position;
         let (glyph_width, glyph_height) = self.font.get_glyph_dimensions();
+        // let (glyph_width, glyph_height) = (glyph_width - 1, glyph_height - 1);
         for c in self.raw.chars() {
             // Pass c to font to get UV values
             let uv = self.font.get_character(c as u8);
@@ -1355,19 +1575,21 @@ impl<'a> Sprite for Text<'a> {
     }
 
     fn draw(&self, vertices: &[(i16, i16, u16, u16); SPRITE_CACHE_MAX], buffer: & mut [u8; DISPLAY_BUFFER_SIZE], y_offset: u16) {
+        let colour = RawU16::from(self.colour).into_inner().to_be_bytes();
         // Loop per character in the string
         // Should use enumerate to get character and index to check if newline
+
         let mut index: usize = 0;
         for (i, c) in self.raw.chars().enumerate() {
-            if c == '\n' || c == ' ' { continue; }
+            if self.font.get_character(c as u8).is_none() { continue; }
 
             let p1 = vertices[(index * 4) + 0];
             let p2 = vertices[(index * 4) + 1];
             let p3 = vertices[(index * 4) + 2];
             let p4 = vertices[(index * 4) + 3];
 
-            triangle_texture(p1, p2, p3, self.font.get_fontsheet(), buffer, y_offset);
-            triangle_texture(p4, p2, p3, self.font.get_fontsheet(), buffer, y_offset);
+            triangle_font(p1, p2, p3, &self.font, &colour, buffer, y_offset);
+            triangle_font(p4, p2, p3, &self.font, &colour, buffer, y_offset);
             
             index += 1;
         }

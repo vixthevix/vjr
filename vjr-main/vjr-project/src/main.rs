@@ -14,6 +14,15 @@ use esp_hal::clock::CpuClock;
 use esp_hal::timer::timg::TimerGroup;
 use log::info;
 
+use embedded_graphics_core::{
+    pixelcolor::{
+        RgbColor, // Trait
+        Rgb565 as RGB, // We are only really dealing with rgb565
+        raw::RawU16,
+    },
+    prelude::RawData
+};
+
 // use esp_hal::gpio::Output;
 
 //use embassy_sync::{
@@ -152,7 +161,7 @@ display_cmd_buffer_new!(DISPLAY_CMD_BUFFER);
 // Images
 const APPLE_VIMG: &[u8] = include_bytes!("../files/images/appl.vimg");
 const CSM_VIMG  : &[u8] = include_bytes!("../files/images/csm_movie.vimg");
-const VFONT_VIMG     : &[u8] = include_bytes!("../files/fonts/v-font-small.vfont");
+const VFONT_VIMG     : &[u8] = include_bytes!("../files/fonts/v-font-small-2.vfont");
 
 // Fonts
 static FONT: StaticCell<Font<'static>> = StaticCell::new();
@@ -267,8 +276,8 @@ async fn main(spawner: Spawner) {
     
     // Font and text displayed
     let font: &'static Font<'static> = FONT.init(Font::new(VFONT_VIMG));
-    let mut text = Text::new(&font, Coord2D::new(50, 50)).with_size(2.0);
-    text.set_str("Hello, World!");
+    let mut text = Text::new(&font, Coord2D::new(5, 50)).with_size(2.0).with_colour(RGB::YELLOW);
+    text.set_str("Kill\nGreat\nJaggi");
 
     
     // Construct our projection and camera
@@ -276,13 +285,13 @@ async fn main(spawner: Spawner) {
     let camera     = Camera::new(0, 0, -50);
     
     // Setup a scene and add shapes
-    let mut home_scene = Scene::new(Display::rgb(255, 255, 255), projection);
-    // home_scene.add(&mut ngon);
-    // home_scene.add(&mut triangle);
-    // home_scene.add(&mut long_triangle);
-    // home_scene.add(&mut quad);
-    // home_scene.add(&mut image);
-    // home_scene.add(&mut circle_image);
+    let mut home_scene = Scene::new(RGB::BLACK, projection);
+    home_scene.add(&mut ngon);
+    home_scene.add(&mut triangle);
+    home_scene.add(&mut long_triangle);
+    home_scene.add(&mut quad);
+    home_scene.add(&mut image);
+    home_scene.add(&mut circle_image);
     home_scene.add(&mut text);
 
     info!("{:#?}", ngon);
@@ -314,7 +323,7 @@ async fn main(spawner: Spawner) {
             let fps = 1e6 as f32 / timer.elapsed().as_micros() as f32;
             timer = Instant::now();
             info!("FPS: {fps}");
-            // ticks.next().await;
+            ticks.next().await;
         }
         
 //        loop { // Background BIOS

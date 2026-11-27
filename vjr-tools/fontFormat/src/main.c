@@ -50,7 +50,7 @@ typedef struct Vfont {
 
 // uint16_t height = 0, width = 0, glyphs_per_col = 0, glyphs_per_row = 0;
 
-Vfont make_vfont(char* fileName, uint16_t glyph_height, uint16_t glyph_width, uint16_t glyphs_per_col, uint16_t glyphs_per_row) {
+Vfont make_vfont(char* fileName, uint16_t glyph_width, uint16_t glyph_height, uint16_t glyphs_per_col, uint16_t glyphs_per_row) {
     Vfont vfont = { 0 };
     
     if (!fileName) {
@@ -123,10 +123,15 @@ Vfont make_vfont(char* fileName, uint16_t glyph_height, uint16_t glyph_width, ui
         B = imgStream[i++],
         A = imgStream[i++];
         
+		// printf("Pixil %lu: (%u, %u, %u, %u)\n", i / 4, R, G, B, A);
+
         write_byte <<= 1;
-        if ((R == 0 && G == 0 && B == 0) || A == 0xff) {
+        if (R == 0 && G == 0 && B == 0) {
             write_byte |= 1;
         }
+		else {
+			write_byte |= 0;
+		}
         
         cur_byte = (cur_byte + 1) % 8;
         if (cur_byte == 0) {

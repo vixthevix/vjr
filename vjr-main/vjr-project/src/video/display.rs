@@ -238,7 +238,7 @@ impl<'a> Display<'a> {
         let spi = Spi::new(
             pinout.spi3,
             SpiConfig::default()
-                .with_frequency(Rate::from_mhz(80))
+                .with_frequency(Rate::from_mhz(60))
                 .with_mode(SpiMode::_0),
         )
         .unwrap()
