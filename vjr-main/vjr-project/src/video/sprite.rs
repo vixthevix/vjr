@@ -1521,9 +1521,12 @@ impl<'a> Text<'a> {
 
 #[macro_export]
 macro_rules! text_set {
-    ($target:expr, $($arg:tt)*) => {
-        $target.set_fmt(format_args!($($arg)*))
-    };
+    ($target:expr, $($arg:tt)*) => {{
+        use core::fmt::Write as _;
+        let raw = &mut $target.raw;
+        raw.clear();
+        let _ = core::write!(raw, $($arg)*);
+    }};
 }
 
 impl<'a> Sprite for Text<'a> {

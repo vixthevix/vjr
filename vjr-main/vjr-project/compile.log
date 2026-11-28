@@ -1,78 +1,66 @@
-   Compiling vjr-project v0.1.0 (/home/vixthevix/Documents/code/personal/vjr/vjr-main/vjr-project)
-warning: unused variable: `i`
-    --> src/video/sprite.rs:1382:14
+    Checking vjr-project v0.1.0 (/home/vixthevix/Documents/code/personal/vjr/vjr-main/vjr-project)
+warning: unused imports: `prelude::RawData` and `raw::RawU16`
+  --> src/main.rs:21:9
+   |
+21 |         raw::RawU16,
+   |         ^^^^^^^^^^^
+22 |     },
+23 |     prelude::RawData
+   |     ^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+error[E0597]: `fps_int` does not live long enough
+   --> src/main.rs:329:47
+    |
+299 |     home_scene.add(&mut fps_tracker);
+    |     -------------------------------- argument requires that `fps_int` is borrowed for `'static`
+...
+329 |             text_set!(fps_tracker, "FPS: {}", fps_int);
+    |                                               ^^^^^^^ borrowed value does not live long enough
+...
+333 |         }
+    |         - `fps_int` dropped here while still borrowed
+    |
+    = note: this error originates in the macro `format_args` which comes from the expansion of the macro `text_set` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0716]: temporary value dropped while borrowed
+    --> src/video/sprite.rs:1525:25
      |
-1382 |         for (i, c) in self.raw.chars().enumerate() {
+1525 |         $target.set_fmt(format_args!($($arg)*))
+     |                         ^^^^^^^^^^^^^^^^^^^^^^- temporary value is freed at the end of this statement
+     |                         |
+     |                         creates a temporary value which is freed while still in use
+     |
+    ::: src/main.rs:299:5
+     |
+ 299 |     home_scene.add(&mut fps_tracker);
+     |     -------------------------------- argument requires that borrow lasts for `'static`
+...
+ 329 |             text_set!(fps_tracker, "FPS: {}", fps_int);
+     |             ------------------------------------------ in this macro invocation
+     |
+     = note: this error originates in the macro `text_set` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: variable does not need to be mutable
+    --> src/video/sprite.rs:1499:13
+     |
+1499 |         let mut new = Self {
+     |             ----^^^
+     |             |
+     |             help: remove this `mut`
+     |
+     = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `i`
+    --> src/video/sprite.rs:1583:14
+     |
+1583 |         for (i, c) in self.raw.chars().enumerate() {
      |              ^ help: if this is intentional, prefix it with an underscore: `_i`
      |
      = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
 
-warning: type `Image<'a>` is more private than the item `sprite::Font::<'a>::get_fontsheet`
-    --> src/video/sprite.rs:1234:5
-     |
-1234 |     pub fn get_fontsheet(&self) ->  &Image<'a> {
-     |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ method `sprite::Font::<'a>::get_fontsheet` is reachable at visibility `pub`
-     |
-note: but type `Image<'a>` is only usable at visibility `pub(self)`
-    --> src/video/sprite.rs:467:1
-     |
- 467 | struct Image<'a> {
-     | ^^^^^^^^^^^^^^^^
-     = note: `#[warn(private_interfaces)]` on by default
-
-warning: fields `compression` and `meta` are never read
-   --> src/video/sprite.rs:470:9
-    |
-467 | struct Image<'a> {
-    |        ----- fields in this struct
-...
-470 |     pub compression: u8,
-    |         ^^^^^^^^^^^
-471 |     
-472 |     pub meta: &'a [u8], // Metadata for compression and such.
-    |         ^^^^
-    |
-    = note: `Image` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
-    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
-
-warning: fields `centroid`, `width`, and `height` are never read
-   --> src/video/sprite.rs:989:5
-    |
-981 | pub struct Quad<'a> {
-    |            ---- fields in this struct
-...
-989 |     centroid: (f32, f32),
-    |     ^^^^^^^^
-990 |
-991 |     width: f32,
-    |     ^^^^^
-992 |     height: f32,
-    |     ^^^^^^
-
-warning: field `depth` is never read
-  --> src/matrix/projection.rs:10:5
-   |
- 8 | pub struct Projection {
-   |            ---------- field in this struct
- 9 |     matrix: Matrix,
-10 |     depth: f32,
-   |     ^^^^^
-
-warning: method `new_2D` should have a snake case name
-  --> src/matrix/projection.rs:18:12
-   |
-18 |     pub fn new_2D(depth: f32) -> Self {
-   |            ^^^^^^ help: convert the identifier to snake case: `new_2_d`
-   |
-   = note: `#[warn(non_snake_case)]` (part of `#[warn(nonstandard_style)]`) on by default
-
-error: linking with `xtensa-esp32-elf-gcc` failed: exit status: 1
-  |
-  = note:  "xtensa-esp32-elf-gcc" "<1 object files omitted>" "-Wl,--as-needed" "-Wl,-Bstatic" "/home/vixthevix/Documents/code/personal/vjr/vjr-main/vjr-project/target/xtensa-esp32-none-elf/release/deps/rustcnZi3Lc/libesp_rom_sys-7db1b11d4b7115e5.rlib" "/home/vixthevix/Documents/code/personal/vjr/vjr-main/vjr-project/target/xtensa-esp32-none-elf/release/deps/libcompiler_builtins-bb3bb232a3ba41eb.rlib" "-Wl,-Bdynamic" "-lesp_rom_sys" "-L" "/home/vixthevix/Documents/code/personal/vjr/vjr-main/vjr-project/target/xtensa-esp32-none-elf/release/deps/rustcnZi3Lc/raw-dylibs" "-Wl,--eh-frame-hdr" "-Wl,-z,noexecstack" "-L" "/home/vixthevix/Documents/code/personal/vjr/vjr-main/vjr-project/target/xtensa-esp32-none-elf/release/build/esp-rom-sys-bd3ca9b54d20f663/out" "-L" "/home/vixthevix/Documents/code/personal/vjr/vjr-main/vjr-project/target/xtensa-esp32-none-elf/release/build/esp32-75e8fc5109a0834c/out" "-L" "/home/vixthevix/Documents/code/personal/vjr/vjr-main/vjr-project/target/xtensa-esp32-none-elf/release/build/esp-hal-7e90c48a4abab0f9/out" "-L" "/home/vixthevix/Documents/code/personal/vjr/vjr-main/vjr-project/target/xtensa-esp32-none-elf/release/build/xtensa-lx-rt-0bd0e1a66607fef0/out" "-L" "/home/vixthevix/Documents/code/personal/vjr/vjr-main/vjr-project/target/xtensa-esp32-none-elf/release/build/esp-radio-387428489614aabf/out" "-L" "/home/vixthevix/Documents/code/personal/vjr/vjr-main/vjr-project/target/xtensa-esp32-none-elf/release/build/esp-phy-a1e694a63116e22d/out" "-L" "/home/vixthevix/Documents/code/personal/vjr/vjr-main/vjr-project/target/xtensa-esp32-none-elf/release/build/esp-wifi-sys-esp32-bd10bb91a0114c96/out" "-o" "/home/vixthevix/Documents/code/personal/vjr/vjr-main/vjr-project/target/xtensa-esp32-none-elf/release/deps/vjr_project-240f3dcda386d0cf" "-Wl,--gc-sections" "-no-pie" "-Wl,--strip-all" "-nodefaultlibs" "-nostartfiles" "-Wl,--error-handling-script=/home/vixthevix/Documents/code/personal/vjr/vjr-main/vjr-project/target/release/build/vjr-project-15b9aa14c0d94f2f/build-script-build" "-Tlinkall.x"
-  = note: some arguments are omitted. use `--verbose` to show all linker arguments
-  = note: /home/vixthevix/.rustup/toolchains/esp/xtensa-esp-elf/esp-15.2.0_20250920/xtensa-esp-elf/bin/../lib/gcc/xtensa-esp-elf/15.2.0/../../../../xtensa-esp-elf/bin/ld:stack.x:13 cannot move location counter backwards (from 3fff9aac to 3ffe0000)
-          collect2: error: ld returned 1 exit status
-          
-
-warning: `vjr-project` (bin "vjr-project") generated 6 warnings
-error: could not compile `vjr-project` (bin "vjr-project") due to 1 previous error; 6 warnings emitted
+Some errors have detailed explanations: E0597, E0716.
+For more information about an error, try `rustc --explain E0597`.
+warning: `vjr-project` (bin "vjr-project") generated 3 warnings
+error: could not compile `vjr-project` (bin "vjr-project") due to 2 previous errors; 3 warnings emitted

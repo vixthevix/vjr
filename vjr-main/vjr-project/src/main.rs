@@ -276,9 +276,12 @@ async fn main(spawner: Spawner) {
     
     // Font and text displayed
     let font: &'static Font<'static> = FONT.init(Font::new(VFONT_VIMG));
-    let mut text = Text::new(&font, Coord2D::new(5, 50)).with_size(2.0).with_colour(RGB::YELLOW);
-    text.set_str("Kill\nGreat\nJaggi");
-
+    //let mut text = Text::new(&font, Coord2D::new(5, 50)).with_size(2.0).with_colour(RGB::YELLOW);
+    //text.set_str("Kill\nGreat\nJaggi");
+    
+    // On-screen FPS tracker
+    let mut fps_tracker = Text::new(&font, Coord2D::new(110, 0)).with_size(2.0).with_colour(RGB::WHITE);
+    fps_tracker.set_str("FPS: 00");
     
     // Construct our projection and camera
     let projection = Projection::new_2D(1.0);
@@ -292,7 +295,8 @@ async fn main(spawner: Spawner) {
     home_scene.add(&mut quad);
     home_scene.add(&mut image);
     home_scene.add(&mut circle_image);
-    home_scene.add(&mut text);
+    // home_scene.add(&mut text);
+    home_scene.add(&mut fps_tracker);
 
     info!("{:#?}", ngon);
     
@@ -307,6 +311,7 @@ async fn main(spawner: Spawner) {
     
     // Used for measuring FPS
     let mut timer = Instant::now();
+    let mut cur_frames = 0;
 
     // Main loop
     loop {
@@ -320,10 +325,15 @@ async fn main(spawner: Spawner) {
             
             renderer.draw_scene(&mut home_scene, &camera).await;
             
-            let fps = 1e6 as f32 / timer.elapsed().as_micros() as f32;
-            timer = Instant::now();
-            info!("FPS: {fps}");
+            cur_frames += 1;
+            if timer.elapsed().as_millis() >= 1000 {
+                text_set!(fps_tracker, "FPS: {}", cur_frames);
+                cur_frames = 0;
+                timer = Instant::now();
+            }
+
             ticks.next().await;
+            //embassy_futures::yield_now().await;
         }
         
 //        loop { // Background BIOS
